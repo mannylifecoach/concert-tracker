@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>shows..</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #fff;
+      line-height: 1.5;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      text-transform: lowercase;
+    }
+
+    .artist-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      font-size: 12px;
+    }
+
+    .artist-filter {
+      color: #666;
+      cursor: pointer;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+      font: inherit;
+      text-transform: lowercase;
+    }
+
+    .artist-filter:hover,
+    .artist-filter.active {
+      color: #fff;
+    }
+
+    .artist-filter .remove {
+      margin-left: 6px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .artist-filter:hover .remove {
+      opacity: 0.5;
+    }
+
+    .artist-filter .remove:hover {
+      opacity: 1;
+    }
+
+    /* Add artist section */
+    .add-artist-section {
+      padding: 0 24px 32px;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 32px;
+    }
+
+    .add-artist-form {
+      display: flex;
+      gap: 12px;
+      max-width: 400px;
+    }
+
+    .add-artist-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #333;
+      padding: 12px 0;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .add-artist-input:focus {
+      border-color: #666;
+    }
+
+    .add-artist-input::placeholder {
+      color: #444;
+    }
+
+    .add-artist-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #666;
+      padding: 8px 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      text-transform: lowercase;
+    }
+
+    .add-artist-btn:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+
+    /* Loading & empty states */
+    .state-message {
+      text-align: center;
+      padding: 80px 24px;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .state-message.error {
+      color: #ef4444;
+    }
+
+    /* Shows grid */
+    .shows-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2px;
+      padding: 0 2px;
+    }
+
+    .show-card {
+      position: relative;
+      aspect-ratio: 4/5;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .show-card:nth-child(3n+2) {
+      aspect-ratio: 1/1;
+    }
+
+    .show-card-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      transition: transform 0.6s ease;
+    }
+
+    .show-card:hover .show-card-bg {
+      transform: scale(1.05);
+    }
+
+    .show-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.2) 100%);
+    }
+
+    .show-card-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+    }
+
+    .show-date {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 8px;
+      text-transform: lowercase;
+      letter-spacing: 0.5px;
+    }
+
+    .show-venue {
+      font-size: 18px;
+      font-weight: 400;
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+
+    .show-city {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    .show-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ticket-btn {
+      font-size: 11px;
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 2px;
+      transition: all 0.2s;
+      text-transform: lowercase;
+      letter-spacing: 1px;
+    }
+
+    .ticket-btn:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    .show-artist {
+      font-size: 10px;
+      color: #555;
+      text-transform: lowercase;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 24px;
+      text-align: center;
+      color: #333;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: lowercase;
+      border-top: 1px solid #1a1a1a;
+      margin-top: 48px;
+    }
+
+    /* API Key Setup */
+    .setup-section {
+      max-width: 500px;
+      margin: 80px auto;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .setup-section h2 {
+      font-size: 16px;
+      font-weight: 400;
+      margin-bottom: 16px;
+      text-transform: lowercase;
+    }
+
+    .setup-section p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    .setup-section input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #333;
+      padding: 14px 16px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .setup-section input:focus {
+      border-color: #666;
+    }
+
+    .setup-section button {
+      background: #fff;
+      border: none;
+      color: #000;
+      padding: 12px 32px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      text-transform: lowercase;
+      letter-spacing: 1px;
+    }
+
+    .setup-section button:hover {
+      background: #ddd;
+    }
+
+    .setup-section .hint {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #444;
+    }
+
+    .setup-section .hint a {
+      color: #666;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+      }
+
+      .artist-filters {
+        width: 100%;
+      }
+
+      .shows-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .show-card,
+      .show-card:nth-child(3n+2) {
+        aspect-ratio: 4/3;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const STORAGE_KEY = 'concert_tracker_artists';
+    const API_KEY_STORAGE = 'concert_tracker_api_key';
+
+    // Gradient backgrounds for show cards (fallback when no image)
+    const gradients = [
+      'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+      'linear-gradient(135deg, #2d132c 0%, #801336 50%, #c72c41 100%)',
+      'linear-gradient(135deg, #0f0f23 0%, #1e3a5f 50%, #3d5a80 100%)',
+      'linear-gradient(135deg, #1a0a0a 0%, #4a1942 50%, #2d132c 100%)',
+      'linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%)',
+      'linear-gradient(135deg, #10002b 0%, #240046 50%, #3c096c 100%)',
+      'linear-gradient(135deg, #1b1b1b 0%, #2e2e2e 50%, #4a4a4a 100%)',
+      'linear-gradient(135deg, #0a1628 0%, #1a365d 50%, #2c5282 100%)',
+      'linear-gradient(135deg, #1a0000 0%, #4a0e0e 50%, #7f1d1d 100%)',
+      'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      'linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)',
+      'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+    ];
+
+    // State
+    let state = {
+      apiKey: localStorage.getItem(API_KEY_STORAGE) || 'XR2dT3GWFrZAGxcnGJs940nDRG6lxdTH',
+      artists: JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
+      shows: [],
+      activeFilter: null,
+      loading: false,
+      error: null,
+    };
+
+    // Save artists to localStorage
+    function saveArtists() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.artists));
+    }
+
+    // Save API key
+    function saveApiKey(key) {
+      state.apiKey = key;
+      localStorage.setItem(API_KEY_STORAGE, key);
+    }
+
+    // Get best image from Ticketmaster images array
+    function getBestImage(images) {
+      if (!images || images.length === 0) return null;
+      
+      // Prefer 16_9 ratio images with good resolution
+      const preferred = images.find(img => 
+        img.ratio === '16_9' && img.width >= 640
+      );
+      if (preferred) return preferred.url;
+      
+      // Fallback to largest image
+      const sorted = [...images].sort((a, b) => (b.width || 0) - (a.width || 0));
+      return sorted[0]?.url || null;
+    }
+
+    // Fetch shows for an artist from Ticketmaster
+    async function fetchArtistShows(artistName) {
+      const encodedName = encodeURIComponent(artistName);
+      const url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${state.apiKey}&keyword=${encodedName}&classificationName=music&size=50&sort=date,asc`;
+      
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          if (response.status === 401) throw new Error('Invalid API key');
+          throw new Error('Failed to fetch');
+        }
+        
+        const data = await response.json();
+        
+        if (!data._embedded?.events) return [];
+        
+        // Filter events that match the artist name more closely
+        const events = data._embedded.events.filter(event => {
+          const attractions = event._embedded?.attractions || [];
+          return attractions.some(a => 
+            a.name.toLowerCase().includes(artistName.toLowerCase()) ||
+            artistName.toLowerCase().includes(a.name.toLowerCase())
+          );
+        });
+        
+        return events.map((event, index) => {
+          const venue = event._embedded?.venues?.[0];
+          const image = getBestImage(event.images);
+          
+          return {
+            id: event.id,
+            artist: artistName,
+            name: event.name,
+            venue: venue?.name || 'TBA',
+            city: venue?.city?.name || '',
+            state: venue?.state?.stateCode || '',
+            country: venue?.country?.countryCode || '',
+            date: new Date(event.dates?.start?.dateTime || event.dates?.start?.localDate),
+            ticketUrl: event.url || '#',
+            image: image,
+            gradient: gradients[index % gradients.length],
+          };
+        });
+      } catch (err) {
+        console.error(`Error fetching ${artistName}:`, err);
+        if (err.message === 'Invalid API key') {
+          state.error = 'Invalid API key. Please check and try again.';
+        }
+        return [];
+      }
+    }
+
+    // Fetch all shows
+    async function fetchAllShows() {
+      if (!state.apiKey || state.artists.length === 0) {
+        state.shows = [];
+        render();
+        return;
+      }
+
+      state.loading = true;
+      state.error = null;
+      render();
+
+      try {
+        const allShows = await Promise.all(
+          state.artists.map(artist => fetchArtistShows(artist))
+        );
+        
+        // Flatten, dedupe by event ID, and sort by date
+        const showMap = new Map();
+        allShows.flat().forEach(show => {
+          if (!showMap.has(show.id)) {
+            showMap.set(show.id, show);
+          }
+        });
+        
+        state.shows = Array.from(showMap.values())
+          .sort((a, b) => a.date - b.date);
+        
+        state.loading = false;
+      } catch (err) {
+        state.error = 'Failed to fetch shows. Please try again.';
+        state.loading = false;
+      }
+      
+      render();
+    }
+
+    // Add artist
+    function addArtist(name) {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (state.artists.some(a => a.toLowerCase() === trimmed.toLowerCase())) return;
+      
+      state.artists.push(trimmed);
+      saveArtists();
+      fetchAllShows();
+    }
+
+    // Remove artist
+    function removeArtist(name) {
+      state.artists = state.artists.filter(a => a !== name);
+      state.shows = state.shows.filter(s => s.artist.toLowerCase() !== name.toLowerCase());
+      if (state.activeFilter === name) state.activeFilter = null;
+      saveArtists();
+      render();
+    }
+
+    // Format date
+    function formatDate(date) {
+      if (!(date instanceof Date) || isNaN(date)) return 'TBA';
+      const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    }
+
+    // Format location
+    function formatLocation(show) {
+      const parts = [show.city, show.state || show.country].filter(Boolean);
+      return parts.join(', ');
+    }
+
+    // Get background style for card
+    function getCardBackground(show) {
+      if (show.image) {
+        return `url('${show.image}')`;
+      }
+      return show.gradient;
+    }
+
+    // Render API key setup
+    function renderSetup() {
+      return `
+        <div class="setup-section">
+          <h2>setup..</h2>
+          <p>
+            to fetch real concert data, you'll need a free ticketmaster api key.
+            paste it below and you're good to go.
+          </p>
+          <input 
+            type="text" 
+            id="api-key-input" 
+            placeholder="paste your api key here"
+            value="${state.apiKey}"
+          >
+          <button id="save-api-key">save & continue</button>
+          <p class="hint">
+            get your free key at <a href="https://developer.ticketmaster.com" target="_blank">developer.ticketmaster.com</a>
+          </p>
+        </div>
+      `;
+    }
+
+    // Render main app
+    function renderApp() {
+      const filteredShows = state.activeFilter
+        ? state.shows.filter(s => s.artist.toLowerCase() === state.activeFilter.toLowerCase())
+        : state.shows;
+
+      return `
+        <div class="container">
+          <header>
+            <div class="logo">shows..</div>
+            <div class="artist-filters">
+              <button class="artist-filter ${!state.activeFilter ? 'active' : ''}" data-filter="all">all</button>
+              ${state.artists.map(artist => `
+                <button class="artist-filter ${state.activeFilter === artist ? 'active' : ''}" data-filter="${artist}">
+                  ${artist.toLowerCase()}
+                  <span class="remove" data-remove="${artist}">×</span>
+                </button>
+              `).join('')}
+            </div>
+          </header>
+
+          <div class="add-artist-section">
+            <form class="add-artist-form" id="add-artist-form">
+              <input 
+                type="text" 
+                class="add-artist-input" 
+                id="artist-input"
+                placeholder="add artist.."
+                autocomplete="off"
+              >
+              <button type="submit" class="add-artist-btn">+ add</button>
+            </form>
+          </div>
+
+          ${state.loading ? `
+            <div class="state-message">loading shows..</div>
+          ` : state.error ? `
+            <div class="state-message error">${state.error}</div>
+          ` : state.artists.length === 0 ? `
+            <div class="state-message">add some artists to see their upcoming shows</div>
+          ` : filteredShows.length === 0 ? `
+            <div class="state-message">no upcoming shows found</div>
+          ` : `
+            <div class="shows-grid">
+              ${filteredShows.map(show => `
+                <div class="show-card">
+                  <div class="show-card-bg" style="background: ${getCardBackground(show)}; background-size: cover; background-position: center;"></div>
+                  <div class="show-card-overlay"></div>
+                  <div class="show-card-content">
+                    <div class="show-date">${formatDate(show.date)}</div>
+                    <div class="show-venue">${show.venue}</div>
+                    <div class="show-city">${formatLocation(show)}</div>
+                    <div class="show-footer">
+                      <a href="${show.ticketUrl}" target="_blank" class="ticket-btn">tickets</a>
+                      <span class="show-artist">${show.artist.toLowerCase()}</span>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+
+          <footer>
+            ✦ powered by ticketmaster
+          </footer>
+        </div>
+      `;
+    }
+
+    // Main render function
+    function render() {
+      const app = document.getElementById('app');
+      
+      if (!state.apiKey) {
+        app.innerHTML = renderSetup();
+        
+        // Setup event listeners
+        document.getElementById('save-api-key')?.addEventListener('click', () => {
+          const input = document.getElementById('api-key-input');
+          if (input.value.trim()) {
+            saveApiKey(input.value.trim());
+            fetchAllShows();
+          }
+        });
+
+        document.getElementById('api-key-input')?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const input = document.getElementById('api-key-input');
+            if (input.value.trim()) {
+              saveApiKey(input.value.trim());
+              fetchAllShows();
+            }
+          }
+        });
+      } else {
+        app.innerHTML = renderApp();
+        
+        // Event listeners
+        document.getElementById('add-artist-form')?.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = document.getElementById('artist-input');
+          addArtist(input.value);
+          input.value = '';
+        });
+
+        document.querySelectorAll('.artist-filter').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove')) return;
+            const filter = btn.dataset.filter;
+            state.activeFilter = filter === 'all' ? null : filter;
+            render();
+          });
+        });
+
+        document.querySelectorAll('.remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeArtist(btn.dataset.remove);
+          });
+        });
+      }
+    }
+
+    // Initialize
+    render();
+    if (state.apiKey && state.artists.length > 0) {
+      fetchAllShows();
+    }
+  </script>
+</body>
+</html>
