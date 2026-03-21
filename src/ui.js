@@ -65,6 +65,57 @@ function renderTicketLinks(show) {
   return html;
 }
 
+function buildShareText(show) {
+  const date = formatDate(show.date);
+  const location = formatLocation(show);
+  return `${show.artist} @ ${show.venue}, ${location} — ${date}`;
+}
+
+async function handleShare(showId) {
+  const show = state.shows.find((s) => s.id === showId);
+  if (!show) return;
+
+  const text = buildShareText(show);
+  const url = show.ticketUrl !== '#' ? show.ticketUrl : '';
+  const shareData = {
+    title: `${show.artist} — ${show.venue}`,
+    text: `${text}\n\ncome with me?`,
+    url,
+  };
+
+  // Use native share on mobile, fallback to copy
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Share failed:', err);
+    }
+  } else {
+    const copyText = url ? `${text}\n${url}` : text;
+    await navigator.clipboard.writeText(copyText);
+    showCopyToast();
+  }
+}
+
+function showCopyToast() {
+  document.getElementById('toast-container')?.remove();
+
+  const container = document.createElement('div');
+  container.id = 'toast-container';
+  container.className = 'toast-container';
+  document.body.appendChild(container);
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = 'copied to clipboard';
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast-visible'));
+  setTimeout(() => {
+    toast.classList.remove('toast-visible');
+    toast.addEventListener('transitionend', () => toast.remove());
+  }, 2500);
+}
+
 function renderSocialLinks(artist) {
   const socials = artist.socials || {};
   const platforms = ['discord', 'instagram', 'twitter', 'spotify', 'youtube', 'facebook', 'homepage'];
@@ -171,7 +222,12 @@ function renderApp() {
                 <div class="show-venue">${escapeHtml(show.venue)}</div>
                 <div class="show-city">${escapeHtml(formatLocation(show))}</div>
                 <div class="show-footer">
-                  <div class="ticket-links">${renderTicketLinks(show)}</div>
+                  <div class="ticket-links">
+                    ${renderTicketLinks(show)}
+                    <button class="share-btn" data-share-id="${escapeHtml(show.id)}" title="share">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </button>
+                  </div>
                   <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
                 </div>
               </div>
@@ -313,6 +369,14 @@ function bindEvents() {
       e.preventDefault();
       document.getElementById('discord-save')?.click();
     }
+  });
+
+  // Share buttons
+  document.querySelectorAll('.share-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleShare(btn.dataset.shareId);
+    });
   });
 
   // Remove artist buttons
