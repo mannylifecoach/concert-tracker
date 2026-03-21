@@ -1,10 +1,9 @@
 import { searchAttractions } from './api.js';
-import { state, saveArtists, saveApiKey, saveSeatGeekId } from './state.js';
+import { state, saveArtists } from './state.js';
 import { fetchAllShows } from './shows.js';
 
 let debounceTimer = null;
 let autocompleteResults = [];
-let showSettings = false;
 
 function formatDate(date) {
   if (!(date instanceof Date) || isNaN(date)) return 'TBA';
@@ -27,28 +26,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-function renderSetup() {
-  return `
-    <div class="setup-section">
-      <h2>setup..</h2>
-      <p>
-        to fetch real concert data, you'll need a free ticketmaster api key.
-        paste it below and you're good to go.
-      </p>
-      <input
-        type="text"
-        id="api-key-input"
-        placeholder="paste your api key here"
-        value="${escapeHtml(state.apiKey)}"
-      >
-      <button id="save-api-key">save & continue</button>
-      <p class="hint">
-        get your free key at <a href="https://developer.ticketmaster.com" target="_blank">developer.ticketmaster.com</a>
-      </p>
-    </div>
-  `;
-}
-
 function renderAutocomplete() {
   if (autocompleteResults.length === 0) return '';
   return `
@@ -59,30 +36,6 @@ function renderAutocomplete() {
           <span>${escapeHtml(a.name)}</span>
         </button>
       `).join('')}
-    </div>
-  `;
-}
-
-function renderSettings() {
-  if (!showSettings) return '';
-  return `
-    <div class="settings-panel">
-      <div class="settings-inner">
-        <div class="settings-header">
-          <span>settings</span>
-          <button class="settings-close" id="close-settings">×</button>
-        </div>
-        <div class="settings-group">
-          <label class="settings-label">ticketmaster api key</label>
-          <input type="text" class="settings-input" id="settings-tm-key" value="${escapeHtml(state.apiKey)}" placeholder="ticketmaster api key">
-        </div>
-        <div class="settings-group">
-          <label class="settings-label">seatgeek client id <span class="optional">(optional)</span></label>
-          <input type="text" class="settings-input" id="settings-sg-key" value="${escapeHtml(state.seatgeekClientId)}" placeholder="seatgeek client id">
-          <p class="settings-hint">adds a second data source for better coverage. get one free at <a href="https://seatgeek.com/account/develop" target="_blank">seatgeek.com/account/develop</a></p>
-        </div>
-        <button class="settings-save" id="save-settings">save</button>
-      </div>
     </div>
   `;
 }
@@ -105,14 +58,10 @@ function renderApp() {
     ? state.shows.filter((s) => s.artist.toLowerCase() === state.activeFilter.toLowerCase())
     : state.shows;
 
-  const sourceCount = state.seatgeekClientId ? 'ticketmaster + seatgeek' : 'ticketmaster';
-
   return `
     <div class="container">
       <header>
-        <div class="header-left">
-          <div class="logo">shows..</div>
-        </div>
+        <div class="logo">shows..</div>
         <div class="artist-filters">
           <button class="artist-filter ${!state.activeFilter ? 'active' : ''}" data-filter="all">all</button>
           ${state.artists.map((artist) => `
@@ -122,7 +71,6 @@ function renderApp() {
             </button>
           `).join('')}
         </div>
-        <button class="settings-btn" id="open-settings">⚙</button>
       </header>
 
       <div class="add-artist-section">
@@ -169,10 +117,9 @@ function renderApp() {
       `}
 
       <footer>
-        ✦ powered by ${sourceCount}
+        ✦ powered by ticketmaster + seatgeek
       </footer>
     </div>
-    ${renderSettings()}
   `;
 }
 
@@ -204,7 +151,7 @@ function handleSearchInput(value) {
 
   debounceTimer = setTimeout(async () => {
     try {
-      autocompleteResults = await searchAttractions(state.apiKey, value);
+      autocompleteResults = await searchAttractions(value);
       render();
       const input = document.getElementById('artist-input');
       if (input) {
@@ -218,44 +165,19 @@ function handleSearchInput(value) {
 }
 
 function bindEvents() {
-  if (!state.apiKey) {
-    document.getElementById('save-api-key')?.addEventListener('click', () => {
-      const input = document.getElementById('api-key-input');
-      if (input.value.trim()) {
-        saveApiKey(input.value.trim());
-        fetchAllShows(render);
-      }
-    });
-
-    document.getElementById('api-key-input')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const input = document.getElementById('api-key-input');
-        if (input.value.trim()) {
-          saveApiKey(input.value.trim());
-          fetchAllShows(render);
-        }
-      }
-    });
-    return;
-  }
-
-  // Artist search input
   const artistInput = document.getElementById('artist-input');
   artistInput?.addEventListener('input', (e) => handleSearchInput(e.target.value));
 
-  // Prevent form submit
   document.getElementById('add-artist-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
   });
 
-  // Autocomplete item clicks
   document.querySelectorAll('.autocomplete-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       addArtist({ id: btn.dataset.id, name: btn.dataset.name });
     });
   });
 
-  // Close autocomplete when clicking outside
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.add-artist-wrapper') && autocompleteResults.length > 0) {
       autocompleteResults = [];
@@ -263,7 +185,6 @@ function bindEvents() {
     }
   });
 
-  // Filter buttons
   document.querySelectorAll('.artist-filter').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       if (e.target.classList.contains('remove')) return;
@@ -273,62 +194,23 @@ function bindEvents() {
     });
   });
 
-  // Remove artist buttons
   document.querySelectorAll('.remove').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       removeArtist(btn.dataset.remove);
     });
   });
-
-  // Settings
-  document.getElementById('open-settings')?.addEventListener('click', () => {
-    showSettings = true;
-    render();
-  });
-
-  document.getElementById('close-settings')?.addEventListener('click', () => {
-    showSettings = false;
-    render();
-  });
-
-  document.getElementById('save-settings')?.addEventListener('click', () => {
-    const tmKey = document.getElementById('settings-tm-key')?.value.trim();
-    const sgKey = document.getElementById('settings-sg-key')?.value.trim();
-
-    if (tmKey) saveApiKey(tmKey);
-    saveSeatGeekId(sgKey || '');
-
-    // Clear cached SeatGeek IDs if the client ID changed
-    state.artists.forEach((a) => { a.seatgeekId = null; });
-    saveArtists();
-
-    showSettings = false;
-    fetchAllShows(render);
-  });
-
-  // Close settings on backdrop click
-  document.querySelector('.settings-panel')?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('settings-panel')) {
-      showSettings = false;
-      render();
-    }
-  });
 }
 
 export function render() {
   const app = document.getElementById('app');
-  if (!state.apiKey) {
-    app.innerHTML = renderSetup();
-  } else {
-    app.innerHTML = renderApp();
-  }
+  app.innerHTML = renderApp();
   bindEvents();
 }
 
 export function init() {
   render();
-  if (state.apiKey && state.artists.length > 0) {
+  if (state.artists.length > 0) {
     fetchAllShows(render);
   }
 }

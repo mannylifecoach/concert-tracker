@@ -1,16 +1,11 @@
 const ARTISTS_KEY = 'concert_tracker_artists';
-const API_KEY_KEY = 'concert_tracker_api_key';
-const SG_KEY_KEY = 'concert_tracker_seatgeek_id';
-
-const DEFAULT_API_KEY = 'XR2dT3GWFrZAGxcnGJs940nDRG6lxdTH';
 
 /**
  * App state — single source of truth.
+ * API keys are now server-side only (Vercel env vars).
  * Artists are stored as { id, name, seatgeekId } objects.
  */
 export const state = {
-  apiKey: localStorage.getItem(API_KEY_KEY) || DEFAULT_API_KEY,
-  seatgeekClientId: localStorage.getItem(SG_KEY_KEY) || 'NTY3ODUwNzB8MTc3NDA2NDU3My41MTA2MzIz',
   artists: loadArtists(),
   shows: [],
   activeFilter: null,
@@ -34,14 +29,4 @@ function loadArtists() {
 
 export function saveArtists() {
   localStorage.setItem(ARTISTS_KEY, JSON.stringify(state.artists));
-}
-
-export function saveApiKey(key) {
-  state.apiKey = key;
-  localStorage.setItem(API_KEY_KEY, key);
-}
-
-export function saveSeatGeekId(clientId) {
-  state.seatgeekClientId = clientId;
-  localStorage.setItem(SG_KEY_KEY, clientId);
 }

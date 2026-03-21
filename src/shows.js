@@ -17,9 +17,6 @@ const gradients = [
   'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
 ];
 
-/**
- * Parse a Ticketmaster event into our show format.
- */
 function parseTMEvent(event, artistName, index) {
   const venue = event._embedded?.venues?.[0];
   const image = getBestImage(event.images);
@@ -40,9 +37,6 @@ function parseTMEvent(event, artistName, index) {
   };
 }
 
-/**
- * Parse a SeatGeek event into our show format.
- */
 function parseSGEvent(event, artistName, index) {
   const venue = event.venue || {};
   const image = getSeatGeekImage(event);
@@ -63,14 +57,11 @@ function parseSGEvent(event, artistName, index) {
   };
 }
 
-/**
- * Resolve SeatGeek performer ID for an artist if not already stored.
- */
 async function resolveSeatGeekId(artist) {
   if (artist.seatgeekId) return artist.seatgeekId;
 
   try {
-    const performers = await searchPerformers(state.seatgeekClientId, artist.name);
+    const performers = await searchPerformers(artist.name);
     if (performers.length > 0) {
       artist.seatgeekId = performers[0].id;
       saveArtists();
@@ -82,21 +73,18 @@ async function resolveSeatGeekId(artist) {
   return null;
 }
 
-/**
- * Fetch Ticketmaster shows for a single artist.
- */
 async function fetchTMShows(artist) {
   try {
     let events;
 
     if (artist.id) {
-      events = await fetchEventsByAttractionId(state.apiKey, artist.id);
+      events = await fetchEventsByAttractionId(artist.id);
     } else {
-      const attractions = await searchAttractions(state.apiKey, artist.name);
+      const attractions = await searchAttractions(artist.name);
       if (attractions.length > 0) {
         artist.id = attractions[0].id;
         saveArtists();
-        events = await fetchEventsByAttractionId(state.apiKey, artist.id);
+        events = await fetchEventsByAttractionId(artist.id);
       } else {
         events = [];
       }
@@ -105,24 +93,16 @@ async function fetchTMShows(artist) {
     return events.map((event, i) => parseTMEvent(event, artist.name, i));
   } catch (err) {
     console.error(`TM error for ${artist.name}:`, err);
-    if (err.message === 'Invalid API key') {
-      state.error = 'Invalid Ticketmaster API key. Please check and try again.';
-    }
     return [];
   }
 }
 
-/**
- * Fetch SeatGeek shows for a single artist.
- */
 async function fetchSGShows(artist) {
-  if (!state.seatgeekClientId) return [];
-
   try {
     const performerId = await resolveSeatGeekId(artist);
     if (!performerId) return [];
 
-    const events = await fetchEventsByPerformerId(state.seatgeekClientId, performerId);
+    const events = await fetchEventsByPerformerId(performerId);
     return events.map((event, i) => parseSGEvent(event, artist.name, i));
   } catch (err) {
     console.error(`SeatGeek error for ${artist.name}:`, err);
@@ -130,11 +110,6 @@ async function fetchSGShows(artist) {
   }
 }
 
-/**
- * Deduplicate shows across sources.
- * Matches by same artist + same date (same day) + same city.
- * When a dupe is found, keep the one with an image (prefer TM), and merge ticket URLs.
- */
 function dedupeShows(shows) {
   const deduped = new Map();
 
@@ -146,12 +121,10 @@ function dedupeShows(shows) {
 
     if (deduped.has(key)) {
       const existing = deduped.get(key);
-      // Merge: add alt ticket link from the other source
       if (show.source === 'seatgeek' && existing.source === 'ticketmaster') {
         existing.altTicketUrl = show.ticketUrl;
         existing.altSource = 'seatgeek';
       } else if (show.source === 'ticketmaster' && existing.source === 'seatgeek') {
-        // Replace with TM version (usually has better images), keep SG link
         show.altTicketUrl = existing.ticketUrl;
         show.altSource = 'seatgeek';
         if (!show.image && existing.image) show.image = existing.image;
@@ -165,11 +138,8 @@ function dedupeShows(shows) {
   return Array.from(deduped.values());
 }
 
-/**
- * Fetch shows for all tracked artists from all sources, dedupe and sort.
- */
 export async function fetchAllShows(renderFn) {
-  if (!state.apiKey || state.artists.length === 0) {
+  if (state.artists.length === 0) {
     state.shows = [];
     renderFn();
     return;
@@ -180,7 +150,6 @@ export async function fetchAllShows(renderFn) {
   renderFn();
 
   try {
-    // Fetch from both sources in parallel
     const [tmResults, sgResults] = await Promise.all([
       Promise.all(state.artists.map(fetchTMShows)),
       Promise.all(state.artists.map(fetchSGShows)),

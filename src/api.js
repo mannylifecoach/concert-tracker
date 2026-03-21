@@ -1,24 +1,16 @@
-const BASE_URL = 'https://app.ticketmaster.com/discovery/v2';
-
 /**
- * Search for artist attractions by name.
+ * Search for artist attractions by name via our serverless proxy.
  * Returns an array of { id, name, imageUrl } matches.
  */
-export async function searchAttractions(apiKey, query) {
+export async function searchAttractions(query) {
   if (!query.trim()) return [];
 
-  const params = new URLSearchParams({
-    apikey: apiKey,
-    keyword: query,
-    classificationName: 'music',
-    size: '8',
-    locale: '*',
-  });
+  const params = new URLSearchParams({ action: 'search', query });
+  const res = await fetch(`/api/ticketmaster?${params}`);
 
-  const res = await fetch(`${BASE_URL}/attractions.json?${params}`);
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Invalid API key');
-    throw new Error('Failed to search attractions');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to search attractions');
   }
 
   const data = await res.json();
@@ -32,22 +24,15 @@ export async function searchAttractions(apiKey, query) {
 }
 
 /**
- * Fetch upcoming events for a specific attraction ID.
+ * Fetch upcoming events for a specific attraction ID via our serverless proxy.
  */
-export async function fetchEventsByAttractionId(apiKey, attractionId) {
-  const params = new URLSearchParams({
-    apikey: apiKey,
-    attractionId,
-    classificationName: 'music',
-    size: '50',
-    sort: 'date,asc',
-    locale: '*',
-  });
+export async function fetchEventsByAttractionId(attractionId) {
+  const params = new URLSearchParams({ action: 'events', attractionId });
+  const res = await fetch(`/api/ticketmaster?${params}`);
 
-  const res = await fetch(`${BASE_URL}/events.json?${params}`);
   if (!res.ok) {
-    if (res.status === 401) throw new Error('Invalid API key');
-    throw new Error('Failed to fetch events');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch events');
   }
 
   const data = await res.json();

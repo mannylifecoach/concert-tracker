@@ -1,22 +1,16 @@
-const BASE_URL = 'https://api.seatgeek.com/2';
-
 /**
- * Search SeatGeek performers by name.
+ * Search SeatGeek performers by name via our serverless proxy.
  * Returns an array of { id, name, imageUrl }.
  */
-export async function searchPerformers(clientId, query) {
+export async function searchPerformers(query) {
   if (!query.trim()) return [];
 
-  const params = new URLSearchParams({
-    client_id: clientId,
-    q: query,
-    per_page: '8',
-  });
+  const params = new URLSearchParams({ action: 'search', query });
+  const res = await fetch(`/api/seatgeek?${params}`);
 
-  const res = await fetch(`${BASE_URL}/performers?${params}`);
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error('Invalid SeatGeek client ID');
-    throw new Error('Failed to search SeatGeek performers');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to search SeatGeek performers');
   }
 
   const data = await res.json();
@@ -28,20 +22,15 @@ export async function searchPerformers(clientId, query) {
 }
 
 /**
- * Fetch upcoming events for a SeatGeek performer ID.
+ * Fetch upcoming events for a SeatGeek performer ID via our serverless proxy.
  */
-export async function fetchEventsByPerformerId(clientId, performerId) {
-  const params = new URLSearchParams({
-    client_id: clientId,
-    'performers.id': performerId,
-    sort: 'datetime_local.asc',
-    per_page: '50',
-  });
+export async function fetchEventsByPerformerId(performerId) {
+  const params = new URLSearchParams({ action: 'events', performerId });
+  const res = await fetch(`/api/seatgeek?${params}`);
 
-  const res = await fetch(`${BASE_URL}/events?${params}`);
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error('Invalid SeatGeek client ID');
-    throw new Error('Failed to fetch SeatGeek events');
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch SeatGeek events');
   }
 
   const data = await res.json();
@@ -49,7 +38,7 @@ export async function fetchEventsByPerformerId(clientId, performerId) {
 }
 
 /**
- * Pick the best image from a SeatGeek performer's images.
+ * Pick the best image from a SeatGeek event's performers.
  */
 export function getSeatGeekImage(event) {
   const performers = event.performers || [];
