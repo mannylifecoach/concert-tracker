@@ -1,4 +1,5 @@
 import { fetchEventsByAttractionId, searchAttractions, getBestImage } from './api.js';
+import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage } from './seatgeek.js';
 import { state, saveArtists } from './state.js';
 
 const gradients = [
@@ -17,14 +18,14 @@ const gradients = [
 ];
 
 /**
- * Parse a single Ticketmaster event into our show format.
+ * Parse a Ticketmaster event into our show format.
  */
-function parseEvent(event, artistName, index) {
+function parseTMEvent(event, artistName, index) {
   const venue = event._embedded?.venues?.[0];
   const image = getBestImage(event.images);
 
   return {
-    id: event.id,
+    id: `tm-${event.id}`,
     artist: artistName,
     name: event.name,
     venue: venue?.name || 'TBA',
@@ -35,44 +36,137 @@ function parseEvent(event, artistName, index) {
     ticketUrl: event.url || '#',
     image,
     gradient: gradients[index % gradients.length],
+    source: 'ticketmaster',
   };
 }
 
 /**
- * Fetch shows for a single artist.
- * Uses attraction ID if available, falls back to keyword search.
+ * Parse a SeatGeek event into our show format.
  */
-async function fetchArtistShows(artist) {
+function parseSGEvent(event, artistName, index) {
+  const venue = event.venue || {};
+  const image = getSeatGeekImage(event);
+
+  return {
+    id: `sg-${event.id}`,
+    artist: artistName,
+    name: event.title || event.short_title,
+    venue: venue.name || 'TBA',
+    city: venue.city || '',
+    state: venue.state || '',
+    country: venue.country || '',
+    date: new Date(event.datetime_local || event.datetime_utc),
+    ticketUrl: event.url || '#',
+    image,
+    gradient: gradients[index % gradients.length],
+    source: 'seatgeek',
+  };
+}
+
+/**
+ * Resolve SeatGeek performer ID for an artist if not already stored.
+ */
+async function resolveSeatGeekId(artist) {
+  if (artist.seatgeekId) return artist.seatgeekId;
+
+  try {
+    const performers = await searchPerformers(state.seatgeekClientId, artist.name);
+    if (performers.length > 0) {
+      artist.seatgeekId = performers[0].id;
+      saveArtists();
+      return artist.seatgeekId;
+    }
+  } catch (err) {
+    console.error(`SeatGeek performer lookup failed for ${artist.name}:`, err);
+  }
+  return null;
+}
+
+/**
+ * Fetch Ticketmaster shows for a single artist.
+ */
+async function fetchTMShows(artist) {
   try {
     let events;
 
     if (artist.id) {
       events = await fetchEventsByAttractionId(state.apiKey, artist.id);
     } else {
-      // Legacy artists without IDs — try to resolve the ID first
       const attractions = await searchAttractions(state.apiKey, artist.name);
       if (attractions.length > 0) {
-        const match = attractions[0];
-        artist.id = match.id;
+        artist.id = attractions[0].id;
         saveArtists();
-        events = await fetchEventsByAttractionId(state.apiKey, match.id);
+        events = await fetchEventsByAttractionId(state.apiKey, artist.id);
       } else {
         events = [];
       }
     }
 
-    return events.map((event, i) => parseEvent(event, artist.name, i));
+    return events.map((event, i) => parseTMEvent(event, artist.name, i));
   } catch (err) {
-    console.error(`Error fetching ${artist.name}:`, err);
+    console.error(`TM error for ${artist.name}:`, err);
     if (err.message === 'Invalid API key') {
-      state.error = 'Invalid API key. Please check and try again.';
+      state.error = 'Invalid Ticketmaster API key. Please check and try again.';
     }
     return [];
   }
 }
 
 /**
- * Fetch shows for all tracked artists, dedupe and sort.
+ * Fetch SeatGeek shows for a single artist.
+ */
+async function fetchSGShows(artist) {
+  if (!state.seatgeekClientId) return [];
+
+  try {
+    const performerId = await resolveSeatGeekId(artist);
+    if (!performerId) return [];
+
+    const events = await fetchEventsByPerformerId(state.seatgeekClientId, performerId);
+    return events.map((event, i) => parseSGEvent(event, artist.name, i));
+  } catch (err) {
+    console.error(`SeatGeek error for ${artist.name}:`, err);
+    return [];
+  }
+}
+
+/**
+ * Deduplicate shows across sources.
+ * Matches by same artist + same date (same day) + same city.
+ * When a dupe is found, keep the one with an image (prefer TM), and merge ticket URLs.
+ */
+function dedupeShows(shows) {
+  const deduped = new Map();
+
+  for (const show of shows) {
+    const dateStr = show.date instanceof Date && !isNaN(show.date)
+      ? show.date.toISOString().slice(0, 10)
+      : '';
+    const key = `${show.artist.toLowerCase()}|${dateStr}|${show.city.toLowerCase()}`;
+
+    if (deduped.has(key)) {
+      const existing = deduped.get(key);
+      // Merge: add alt ticket link from the other source
+      if (show.source === 'seatgeek' && existing.source === 'ticketmaster') {
+        existing.altTicketUrl = show.ticketUrl;
+        existing.altSource = 'seatgeek';
+      } else if (show.source === 'ticketmaster' && existing.source === 'seatgeek') {
+        // Replace with TM version (usually has better images), keep SG link
+        show.altTicketUrl = existing.ticketUrl;
+        show.altSource = 'seatgeek';
+        if (!show.image && existing.image) show.image = existing.image;
+        deduped.set(key, show);
+      }
+    } else {
+      deduped.set(key, show);
+    }
+  }
+
+  return Array.from(deduped.values());
+}
+
+/**
+ * Fetch shows for all tracked artists from all sources, dedupe and sort.
  */
 export async function fetchAllShows(renderFn) {
   if (!state.apiKey || state.artists.length === 0) {
@@ -86,16 +180,14 @@ export async function fetchAllShows(renderFn) {
   renderFn();
 
   try {
-    const allShows = await Promise.all(state.artists.map(fetchArtistShows));
+    // Fetch from both sources in parallel
+    const [tmResults, sgResults] = await Promise.all([
+      Promise.all(state.artists.map(fetchTMShows)),
+      Promise.all(state.artists.map(fetchSGShows)),
+    ]);
 
-    const showMap = new Map();
-    allShows.flat().forEach((show) => {
-      if (!showMap.has(show.id)) {
-        showMap.set(show.id, show);
-      }
-    });
-
-    state.shows = Array.from(showMap.values()).sort((a, b) => a.date - b.date);
+    const allShows = [...tmResults.flat(), ...sgResults.flat()];
+    state.shows = dedupeShows(allShows).sort((a, b) => a.date - b.date);
     state.loading = false;
   } catch {
     state.error = 'Failed to fetch shows. Please try again.';

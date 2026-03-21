@@ -1,9 +1,10 @@
 import { searchAttractions } from './api.js';
-import { state, saveArtists, saveApiKey } from './state.js';
+import { state, saveArtists, saveApiKey, saveSeatGeekId } from './state.js';
 import { fetchAllShows } from './shows.js';
 
 let debounceTimer = null;
 let autocompleteResults = [];
+let showSettings = false;
 
 function formatDate(date) {
   if (!(date instanceof Date) || isNaN(date)) return 'TBA';
@@ -62,15 +63,56 @@ function renderAutocomplete() {
   `;
 }
 
+function renderSettings() {
+  if (!showSettings) return '';
+  return `
+    <div class="settings-panel">
+      <div class="settings-inner">
+        <div class="settings-header">
+          <span>settings</span>
+          <button class="settings-close" id="close-settings">×</button>
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">ticketmaster api key</label>
+          <input type="text" class="settings-input" id="settings-tm-key" value="${escapeHtml(state.apiKey)}" placeholder="ticketmaster api key">
+        </div>
+        <div class="settings-group">
+          <label class="settings-label">seatgeek client id <span class="optional">(optional)</span></label>
+          <input type="text" class="settings-input" id="settings-sg-key" value="${escapeHtml(state.seatgeekClientId)}" placeholder="seatgeek client id">
+          <p class="settings-hint">adds a second data source for better coverage. get one free at <a href="https://seatgeek.com/account/develop" target="_blank">seatgeek.com/account/develop</a></p>
+        </div>
+        <button class="settings-save" id="save-settings">save</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderSourceBadge(show) {
+  const label = show.source === 'seatgeek' ? 'sg' : 'tm';
+  return `<span class="source-badge source-${show.source}">${label}</span>`;
+}
+
+function renderTicketLinks(show) {
+  let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn">${show.source === 'seatgeek' ? 'seatgeek' : 'tickets'}</a>`;
+  if (show.altTicketUrl) {
+    html += `<a href="${escapeHtml(show.altTicketUrl)}" target="_blank" class="ticket-btn ticket-btn-alt">${show.altSource === 'seatgeek' ? 'seatgeek' : 'tickets'}</a>`;
+  }
+  return html;
+}
+
 function renderApp() {
   const filteredShows = state.activeFilter
     ? state.shows.filter((s) => s.artist.toLowerCase() === state.activeFilter.toLowerCase())
     : state.shows;
 
+  const sourceCount = state.seatgeekClientId ? 'ticketmaster + seatgeek' : 'ticketmaster';
+
   return `
     <div class="container">
       <header>
-        <div class="logo">shows..</div>
+        <div class="header-left">
+          <div class="logo">shows..</div>
+        </div>
         <div class="artist-filters">
           <button class="artist-filter ${!state.activeFilter ? 'active' : ''}" data-filter="all">all</button>
           ${state.artists.map((artist) => `
@@ -80,6 +122,7 @@ function renderApp() {
             </button>
           `).join('')}
         </div>
+        <button class="settings-btn" id="open-settings">⚙</button>
       </header>
 
       <div class="add-artist-section">
@@ -112,11 +155,11 @@ function renderApp() {
               <div class="show-card-bg" style="background: ${getCardBackground(show)}; background-size: cover; background-position: center;"></div>
               <div class="show-card-overlay"></div>
               <div class="show-card-content">
-                <div class="show-date">${formatDate(show.date)}</div>
+                <div class="show-date">${formatDate(show.date)} ${renderSourceBadge(show)}</div>
                 <div class="show-venue">${escapeHtml(show.venue)}</div>
                 <div class="show-city">${escapeHtml(formatLocation(show))}</div>
                 <div class="show-footer">
-                  <a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn">tickets</a>
+                  <div class="ticket-links">${renderTicketLinks(show)}</div>
                   <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
                 </div>
               </div>
@@ -126,16 +169,17 @@ function renderApp() {
       `}
 
       <footer>
-        ✦ powered by ticketmaster
+        ✦ powered by ${sourceCount}
       </footer>
     </div>
+    ${renderSettings()}
   `;
 }
 
 function addArtist(attraction) {
   if (state.artists.some((a) => a.id === attraction.id)) return;
 
-  state.artists.push({ id: attraction.id, name: attraction.name });
+  state.artists.push({ id: attraction.id, name: attraction.name, seatgeekId: null });
   saveArtists();
   autocompleteResults = [];
   fetchAllShows(render);
@@ -162,7 +206,6 @@ function handleSearchInput(value) {
     try {
       autocompleteResults = await searchAttractions(state.apiKey, value);
       render();
-      // Re-focus input and restore value after render
       const input = document.getElementById('artist-input');
       if (input) {
         input.value = value;
@@ -200,7 +243,7 @@ function bindEvents() {
   const artistInput = document.getElementById('artist-input');
   artistInput?.addEventListener('input', (e) => handleSearchInput(e.target.value));
 
-  // Prevent form submit (we use autocomplete selection instead)
+  // Prevent form submit
   document.getElementById('add-artist-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
   });
@@ -236,6 +279,40 @@ function bindEvents() {
       e.stopPropagation();
       removeArtist(btn.dataset.remove);
     });
+  });
+
+  // Settings
+  document.getElementById('open-settings')?.addEventListener('click', () => {
+    showSettings = true;
+    render();
+  });
+
+  document.getElementById('close-settings')?.addEventListener('click', () => {
+    showSettings = false;
+    render();
+  });
+
+  document.getElementById('save-settings')?.addEventListener('click', () => {
+    const tmKey = document.getElementById('settings-tm-key')?.value.trim();
+    const sgKey = document.getElementById('settings-sg-key')?.value.trim();
+
+    if (tmKey) saveApiKey(tmKey);
+    saveSeatGeekId(sgKey || '');
+
+    // Clear cached SeatGeek IDs if the client ID changed
+    state.artists.forEach((a) => { a.seatgeekId = null; });
+    saveArtists();
+
+    showSettings = false;
+    fetchAllShows(render);
+  });
+
+  // Close settings on backdrop click
+  document.querySelector('.settings-panel')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('settings-panel')) {
+      showSettings = false;
+      render();
+    }
   });
 }
 
