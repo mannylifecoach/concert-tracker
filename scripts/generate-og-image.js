@@ -1,0 +1,60 @@
+/**
+ * Generate OG image as an SVG file.
+ * SVG is widely supported for og:image, but we also create a fallback.
+ * Run: node scripts/generate-og-image.js
+ */
+import { writeFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const outPath = join(__dirname, '..', 'public', 'og-image.svg');
+
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="50%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0f3460"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feBlend in="SourceGraphic" mode="multiply" result="grain"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle grain overlay -->
+  <rect width="1200" height="630" filter="url(#grain)" opacity="0.03"/>
+
+  <!-- Decorative circles (like concert lights) -->
+  <circle cx="150" cy="100" r="200" fill="#c72c41" opacity="0.08"/>
+  <circle cx="1050" cy="530" r="250" fill="#3c096c" opacity="0.1"/>
+  <circle cx="600" cy="315" r="300" fill="#0f3460" opacity="0.06"/>
+
+  <!-- Main title -->
+  <text x="600" y="280" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="96" font-weight="300" fill="#ffffff" letter-spacing="-2">
+    shows..
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="350" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="28" font-weight="400" fill="rgba(255,255,255,0.5)" letter-spacing="4">
+    TRACK YOUR ARTISTS. NEVER MISS A SHOW.
+  </text>
+
+  <!-- Bottom accent line -->
+  <rect x="500" y="390" width="200" height="2" rx="1" fill="rgba(255,255,255,0.15)"/>
+
+  <!-- Source badges -->
+  <rect x="430" y="430" width="140" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <text x="500" y="454" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="rgba(255,255,255,0.5)" letter-spacing="1">TICKETMASTER</text>
+
+  <rect x="590" y="430" width="100" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <text x="640" y="454" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="rgba(255,255,255,0.5)" letter-spacing="1">SEATGEEK</text>
+</svg>`;
+
+writeFileSync(outPath, svg);
+console.log(`OG image written to ${outPath}`);
