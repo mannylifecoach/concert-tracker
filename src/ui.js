@@ -307,12 +307,22 @@ function bindEvents() {
     });
   });
 
-  // Close autocomplete when clicking outside
+  // Close autocomplete and socials panel when clicking/tapping outside
   document.addEventListener('click', (e) => {
+    let needsRender = false;
+
     if (!e.target.closest('.add-artist-wrapper') && autocompleteResults.length > 0) {
       autocompleteResults = [];
-      render();
+      needsRender = true;
     }
+
+    if (!e.target.closest('.artist-filter-group') && !e.target.closest('.artist-socials-panel') && expandedArtist) {
+      expandedArtist = null;
+      discordEditArtist = null;
+      needsRender = true;
+    }
+
+    if (needsRender) render();
   });
 
   // Filter buttons

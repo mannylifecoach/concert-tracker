@@ -4,6 +4,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -530,21 +531,184 @@ footer {
 }
 
 /* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  /* Header */
   header {
     flex-direction: column;
+    padding: 20px 16px;
+    gap: 12px;
   }
 
   .artist-filters {
     width: 100%;
+    gap: 8px 12px;
   }
 
+  /* Artist filter — always show remove on mobile (no hover) */
+  .artist-filter .remove {
+    opacity: 0.5;
+  }
+
+  /* Socials toggle — always visible on mobile */
+  .socials-toggle {
+    opacity: 0.4 !important;
+  }
+
+  /* Social links panel — fixed bottom sheet on mobile */
+  .artist-socials-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    border-radius: 12px 12px 0 0;
+    padding: 16px;
+    min-width: auto;
+    border: 1px solid #2a2a2a;
+    border-bottom: none;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .social-links {
+    justify-content: center;
+  }
+
+  .social-link {
+    width: 44px;
+    height: 44px;
+  }
+
+  .social-link svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .discord-input {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .discord-save {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  /* Add artist section */
+  .add-artist-section {
+    padding: 0 16px 24px;
+    margin-bottom: 24px;
+  }
+
+  .add-artist-wrapper {
+    max-width: 100%;
+  }
+
+  .add-artist-input {
+    font-size: 16px; /* prevents iOS zoom on focus */
+    padding: 14px 0;
+  }
+
+  /* Autocomplete dropdown — full width on mobile */
+  .autocomplete-dropdown {
+    max-height: 260px;
+  }
+
+  .autocomplete-item {
+    padding: 12px;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .autocomplete-img {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Shows grid */
   .shows-grid {
     grid-template-columns: 1fr;
+    gap: 1px;
+    padding: 0 1px;
   }
 
   .show-card,
   .show-card:nth-child(3n+2) {
+    aspect-ratio: 16/10;
+  }
+
+  .show-card-content {
+    padding: 16px;
+  }
+
+  .show-venue {
+    font-size: 16px;
+  }
+
+  .show-city {
+    margin-bottom: 12px;
+  }
+
+  /* Ticket links — wrap on small screens */
+  .show-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ticket-links {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ticket-btn {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+  /* Share button — larger tap target on mobile */
+  .share-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .share-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Toast — bottom center on mobile */
+  .toast-container {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+
+  .toast {
+    font-size: 13px;
+    padding: 14px 16px;
+  }
+
+  /* Empty states */
+  .state-message {
+    padding: 60px 16px;
+  }
+
+  /* Footer */
+  footer {
+    padding: 32px 16px;
+    margin-top: 32px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .show-card,
+  .show-card:nth-child(3n+2) {
     aspect-ratio: 4/3;
+  }
+
+  .ticket-btn {
+    padding: 8px 12px;
+    font-size: 11px;
   }
 }
