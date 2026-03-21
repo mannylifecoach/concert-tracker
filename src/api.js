@@ -20,6 +20,7 @@ export async function searchAttractions(query) {
     id: a.id,
     name: a.name,
     imageUrl: getBestImage(a.images),
+    socials: parseSocials(a.externalLinks),
   }));
 }
 
@@ -37,6 +38,24 @@ export async function fetchEventsByAttractionId(attractionId) {
 
   const data = await res.json();
   return data._embedded?.events || [];
+}
+
+/**
+ * Extract social media links from Ticketmaster externalLinks.
+ */
+function parseSocials(externalLinks) {
+  if (!externalLinks) return {};
+
+  const socials = {};
+  const platforms = ['instagram', 'twitter', 'facebook', 'youtube', 'spotify', 'homepage'];
+
+  for (const platform of platforms) {
+    if (externalLinks[platform]?.[0]?.url) {
+      socials[platform] = externalLinks[platform][0].url;
+    }
+  }
+
+  return socials;
 }
 
 /**

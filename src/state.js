@@ -3,7 +3,7 @@ const ARTISTS_KEY = 'concert_tracker_artists';
 /**
  * App state — single source of truth.
  * API keys are now server-side only (Vercel env vars).
- * Artists are stored as { id, name, seatgeekId } objects.
+ * Artists are stored as { id, name, seatgeekId, socials } objects.
  */
 export const state = {
   artists: loadArtists(),

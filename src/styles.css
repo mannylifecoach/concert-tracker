@@ -88,6 +88,136 @@ header {
   opacity: 1;
 }
 
+/* Artist filter groups */
+.artist-filter-group {
+  position: relative;
+}
+
+.socials-toggle {
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 10px;
+}
+
+.artist-filter:hover .socials-toggle {
+  opacity: 0.4;
+}
+
+.socials-toggle:hover {
+  opacity: 1 !important;
+}
+
+/* Artist socials panel */
+.artist-socials-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #151515;
+  border: 1px solid #2a2a2a;
+  padding: 10px 12px;
+  z-index: 100;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  position: relative;
+}
+
+.social-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.social-link:hover {
+  color: #fff;
+  border-color: #555;
+}
+
+.social-instagram:hover { color: #e1306c; }
+.social-twitter:hover { color: #fff; }
+.social-facebook:hover { color: #1877f2; }
+.social-youtube:hover { color: #ff0000; }
+.social-spotify:hover { color: #1db954; }
+.social-discord:hover { color: #5865f2; }
+.social-homepage:hover { color: #fff; }
+
+.social-add {
+  border-style: dashed;
+  color: #555;
+}
+
+.social-add-plus {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 10px;
+  color: #555;
+  line-height: 1;
+}
+
+.social-add:hover .social-add-plus {
+  color: #5865f2;
+}
+
+/* Discord edit input */
+.discord-edit {
+  display: flex;
+  gap: 6px;
+}
+
+.discord-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  padding: 6px 8px;
+  color: #fff;
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.discord-input:focus {
+  border-color: #5865f2;
+}
+
+.discord-save {
+  background: #5865f2;
+  border: none;
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: lowercase;
+}
+
+.discord-save:hover {
+  background: #4752c4;
+}
+
 /* Add artist section */
 .add-artist-section {
   padding: 0 24px 32px;
