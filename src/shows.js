@@ -158,11 +158,16 @@ export async function fetchAllShows(renderFn) {
     const allShows = [...tmResults.flat(), ...sgResults.flat()];
     state.shows = dedupeShows(allShows).sort((a, b) => a.date - b.date);
 
-    // Find artists with zero shows
+    // Find and remove artists with zero shows
     const artistsWithShows = new Set(state.shows.map((s) => s.artist.toLowerCase()));
     state.noShowArtists = state.artists
       .filter((a) => !artistsWithShows.has(a.name.toLowerCase()))
       .map((a) => a.name);
+
+    if (state.noShowArtists.length > 0) {
+      state.artists = state.artists.filter((a) => artistsWithShows.has(a.name.toLowerCase()));
+      saveArtists();
+    }
 
     state.loading = false;
   } catch {

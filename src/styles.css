@@ -496,7 +496,7 @@ footer {
 /* Toast notifications */
 .toast-container {
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   right: 24px;
   z-index: 900;
   display: flex;
@@ -676,9 +676,9 @@ footer {
     height: 16px;
   }
 
-  /* Toast — bottom center on mobile */
+  /* Toast — top center on mobile */
   .toast-container {
-    bottom: 16px;
+    top: 16px;
     right: 16px;
     left: 16px;
   }
