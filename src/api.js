@@ -21,6 +21,7 @@ export async function searchAttractions(query) {
     name: a.name,
     imageUrl: getBestImage(a.images),
     socials: parseSocials(a.externalLinks),
+    isFestival: isAttractionFestival(a),
   }));
 }
 
@@ -38,6 +39,16 @@ export async function fetchEventsByAttractionId(attractionId) {
 
   const data = await res.json();
   return data._embedded?.events || [];
+}
+
+/**
+ * Check if a Ticketmaster attraction is a festival.
+ */
+function isAttractionFestival(attraction) {
+  const cls = attraction.classifications?.[0] || {};
+  if (cls.subType?.name?.toLowerCase() === 'festival') return true;
+  if (cls.genre?.name?.toLowerCase().includes('festival')) return true;
+  return /\bfest(ival)?\b/i.test(attraction.name || '');
 }
 
 /**

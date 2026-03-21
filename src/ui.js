@@ -43,9 +43,10 @@ function renderAutocomplete() {
   return `
     <div class="autocomplete-dropdown">
       ${autocompleteResults.map((a) => `
-        <button class="autocomplete-item" data-id="${escapeHtml(a.id)}" data-name="${escapeHtml(a.name)}" data-socials='${escapeHtml(JSON.stringify(a.socials || {}))}'>
+        <button class="autocomplete-item" data-id="${escapeHtml(a.id)}" data-name="${escapeHtml(a.name)}" data-socials='${escapeHtml(JSON.stringify(a.socials || {}))}' data-festival="${a.isFestival ? 'true' : 'false'}">
           ${a.imageUrl ? `<img src="${escapeHtml(a.imageUrl)}" alt="" class="autocomplete-img">` : '<div class="autocomplete-img placeholder"></div>'}
           <span>${escapeHtml(a.name)}</span>
+          ${a.isFestival ? '<span class="autocomplete-festival-tag">festival</span>' : ''}
         </button>
       `).join('')}
     </div>
@@ -182,7 +183,7 @@ function renderApp() {
           ${state.artists.map((artist) => `
             <div class="artist-filter-group">
               <button class="artist-filter ${state.activeFilter === artist.name ? 'active' : ''}" data-filter="${escapeHtml(artist.name)}">
-                ${escapeHtml(artist.name.toLowerCase())}
+                ${escapeHtml(artist.name.toLowerCase())}${artist.isFestival ? '<span class="filter-festival-tag">fest</span>' : ''}
                 <span class="socials-toggle" data-socials-toggle="${escapeHtml(artist.name)}">↗</span>
                 <span class="remove" data-remove="${escapeHtml(artist.name)}">×</span>
               </button>
@@ -255,6 +256,7 @@ function addArtist(attraction) {
     name: attraction.name,
     seatgeekId: null,
     socials: attraction.socials || {},
+    isFestival: attraction.isFestival || false,
   });
   saveArtists();
   autocompleteResults = [];
@@ -307,7 +309,7 @@ function bindEvents() {
     btn.addEventListener('click', () => {
       let socials = {};
       try { socials = JSON.parse(btn.dataset.socials || '{}'); } catch {}
-      addArtist({ id: btn.dataset.id, name: btn.dataset.name, socials });
+      addArtist({ id: btn.dataset.id, name: btn.dataset.name, socials, isFestival: btn.dataset.festival === 'true' });
     });
   });
 

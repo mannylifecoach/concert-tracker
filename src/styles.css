@@ -455,6 +455,25 @@ footer {
   color: #eab308;
 }
 
+/* Festival tags in autocomplete and filters */
+.autocomplete-festival-tag {
+  margin-left: auto;
+  font-size: 10px;
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.15);
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-festival-tag {
+  font-size: 9px;
+  color: #eab308;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 /* Ticket links */
 .ticket-links {
   display: flex;
