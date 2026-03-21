@@ -1,0 +1,383 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background: #0a0a0a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #fff;
+  line-height: 1.5;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+header {
+  padding: 32px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+}
+
+.artist-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  font-size: 12px;
+}
+
+.artist-filter {
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+  background: none;
+  border: none;
+  font: inherit;
+  text-transform: lowercase;
+}
+
+.artist-filter:hover,
+.artist-filter.active {
+  color: #fff;
+}
+
+.artist-filter .remove {
+  margin-left: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.artist-filter:hover .remove {
+  opacity: 0.5;
+}
+
+.artist-filter .remove:hover {
+  opacity: 1;
+}
+
+/* Add artist section */
+.add-artist-section {
+  padding: 0 24px 32px;
+  border-bottom: 1px solid #1a1a1a;
+  margin-bottom: 32px;
+}
+
+.add-artist-wrapper {
+  position: relative;
+  max-width: 400px;
+}
+
+.add-artist-form {
+  display: flex;
+  gap: 12px;
+}
+
+.add-artist-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #333;
+  padding: 12px 0;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.add-artist-input:focus {
+  border-color: #666;
+}
+
+.add-artist-input::placeholder {
+  color: #444;
+}
+
+/* Autocomplete dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #151515;
+  border: 1px solid #2a2a2a;
+  border-top: none;
+  z-index: 100;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ccc;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.autocomplete-item:hover {
+  background: #222;
+  color: #fff;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.autocomplete-img.placeholder {
+  background: #2a2a2a;
+}
+
+/* Loading & empty states */
+.state-message {
+  text-align: center;
+  padding: 80px 24px;
+  color: #444;
+  font-size: 14px;
+}
+
+.state-message.error {
+  color: #ef4444;
+}
+
+/* Shows grid */
+.shows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.show-card {
+  position: relative;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.show-card:nth-child(3n+2) {
+  aspect-ratio: 1/1;
+}
+
+.show-card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.6s ease;
+}
+
+.show-card:hover .show-card-bg {
+  transform: scale(1.05);
+}
+
+.show-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.2) 100%);
+}
+
+.show-card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px;
+}
+
+.show-date {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 8px;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
+.show-venue {
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+}
+
+.show-city {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+.show-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ticket-btn {
+  font-size: 11px;
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 2px;
+  transition: all 0.2s;
+  text-transform: lowercase;
+  letter-spacing: 1px;
+}
+
+.ticket-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+.show-artist {
+  font-size: 10px;
+  color: #555;
+  text-transform: lowercase;
+}
+
+/* Footer */
+footer {
+  padding: 48px 24px;
+  text-align: center;
+  color: #333;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: lowercase;
+  border-top: 1px solid #1a1a1a;
+  margin-top: 48px;
+}
+
+/* API Key Setup */
+.setup-section {
+  max-width: 500px;
+  margin: 80px auto;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.setup-section h2 {
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 16px;
+  text-transform: lowercase;
+}
+
+.setup-section p {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.setup-section input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #333;
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.setup-section input:focus {
+  border-color: #666;
+}
+
+.setup-section button {
+  background: #fff;
+  border: none;
+  color: #000;
+  padding: 12px 32px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: lowercase;
+  letter-spacing: 1px;
+}
+
+.setup-section button:hover {
+  background: #ddd;
+}
+
+.setup-section .hint {
+  margin-top: 24px;
+  font-size: 11px;
+  color: #444;
+}
+
+.setup-section .hint a {
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+  }
+
+  .artist-filters {
+    width: 100%;
+  }
+
+  .shows-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .show-card,
+  .show-card:nth-child(3n+2) {
+    aspect-ratio: 4/3;
+  }
+}

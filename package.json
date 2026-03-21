@@ -1,0 +1,25 @@
+{
+  "name": "concert-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/mannyalboroto/concert-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/mannyalboroto/concert-tracker/issues"
+  },
+  "homepage": "https://gitlab.com/mannyalboroto/concert-tracker#readme",
+  "devDependencies": {
+    "vite": "^8.0.1"
+  }
+}
