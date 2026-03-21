@@ -157,6 +157,13 @@ export async function fetchAllShows(renderFn) {
 
     const allShows = [...tmResults.flat(), ...sgResults.flat()];
     state.shows = dedupeShows(allShows).sort((a, b) => a.date - b.date);
+
+    // Find artists with zero shows
+    const artistsWithShows = new Set(state.shows.map((s) => s.artist.toLowerCase()));
+    state.noShowArtists = state.artists
+      .filter((a) => !artistsWithShows.has(a.name.toLowerCase()))
+      .map((a) => a.name);
+
     state.loading = false;
   } catch {
     state.error = 'Failed to fetch shows. Please try again.';

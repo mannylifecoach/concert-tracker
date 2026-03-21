@@ -11,6 +11,7 @@ export const state = {
   activeFilter: null,
   loading: false,
   error: null,
+  noShowArtists: [],
 };
 
 function loadArtists() {

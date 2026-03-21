@@ -324,10 +324,43 @@ function bindEvents() {
   });
 }
 
+function showToasts() {
+  if (!state.noShowArtists || state.noShowArtists.length === 0) return;
+
+  // Remove any existing toast container
+  document.getElementById('toast-container')?.remove();
+
+  const container = document.createElement('div');
+  container.id = 'toast-container';
+  container.className = 'toast-container';
+  document.body.appendChild(container);
+
+  state.noShowArtists.forEach((name, i) => {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `no upcoming shows found for <strong>${escapeHtml(name.toLowerCase())}</strong>`;
+
+    setTimeout(() => {
+      container.appendChild(toast);
+      // Trigger animation
+      requestAnimationFrame(() => toast.classList.add('toast-visible'));
+      // Auto dismiss after 4s
+      setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        toast.addEventListener('transitionend', () => toast.remove());
+      }, 4000);
+    }, i * 300);
+  });
+
+  // Clear so we don't re-show on next render
+  state.noShowArtists = [];
+}
+
 export function render() {
   const app = document.getElementById('app');
   app.innerHTML = renderApp();
   bindEvents();
+  showToasts();
 }
 
 export function init() {
