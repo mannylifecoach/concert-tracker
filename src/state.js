@@ -10,7 +10,7 @@ const DEFAULT_API_KEY = 'XR2dT3GWFrZAGxcnGJs940nDRG6lxdTH';
  */
 export const state = {
   apiKey: localStorage.getItem(API_KEY_KEY) || DEFAULT_API_KEY,
-  seatgeekClientId: localStorage.getItem(SG_KEY_KEY) || '',
+  seatgeekClientId: localStorage.getItem(SG_KEY_KEY) || 'NTY3ODUwNzB8MTc3NDA2NDU3My41MTA2MzIz',
   artists: loadArtists(),
   shows: [],
   activeFilter: null,
