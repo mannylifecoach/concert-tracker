@@ -450,6 +450,11 @@ footer {
   color: #7ec8e3;
 }
 
+.badge-festival {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
 /* Ticket links */
 .ticket-links {
   display: flex;

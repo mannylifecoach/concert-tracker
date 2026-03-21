@@ -54,7 +54,11 @@ function renderAutocomplete() {
 
 function renderSourceBadge(show) {
   const label = show.source === 'seatgeek' ? 'sg' : 'tm';
-  return `<span class="source-badge source-${show.source}">${label}</span>`;
+  let html = `<span class="source-badge source-${show.source}">${label}</span>`;
+  if (show.isFestival) {
+    html += `<span class="source-badge badge-festival">festival</span>`;
+  }
+  return html;
 }
 
 function renderTicketLinks(show) {

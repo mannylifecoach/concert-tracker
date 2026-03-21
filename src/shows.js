@@ -17,6 +17,14 @@ const gradients = [
   'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
 ];
 
+function isFestival(event) {
+  const cls = event.classifications?.[0] || {};
+  if (cls.subType?.name?.toLowerCase() === 'festival') return true;
+  if (cls.genre?.name?.toLowerCase().includes('festival')) return true;
+  const name = (event.name || event.title || '').toLowerCase();
+  return /\bfest(ival)?\b/.test(name);
+}
+
 function parseTMEvent(event, artistName, index) {
   const venue = event._embedded?.venues?.[0];
   const image = getBestImage(event.images);
@@ -34,6 +42,7 @@ function parseTMEvent(event, artistName, index) {
     image,
     gradient: gradients[index % gradients.length],
     source: 'ticketmaster',
+    isFestival: isFestival(event),
   };
 }
 
@@ -54,6 +63,7 @@ function parseSGEvent(event, artistName, index) {
     image,
     gradient: gradients[index % gradients.length],
     source: 'seatgeek',
+    isFestival: isFestival(event),
   };
 }
 
@@ -124,9 +134,11 @@ function dedupeShows(shows) {
       if (show.source === 'seatgeek' && existing.source === 'ticketmaster') {
         existing.altTicketUrl = show.ticketUrl;
         existing.altSource = 'seatgeek';
+        existing.isFestival = existing.isFestival || show.isFestival;
       } else if (show.source === 'ticketmaster' && existing.source === 'seatgeek') {
         show.altTicketUrl = existing.ticketUrl;
         show.altSource = 'seatgeek';
+        show.isFestival = show.isFestival || existing.isFestival;
         if (!show.image && existing.image) show.image = existing.image;
         deduped.set(key, show);
       }
