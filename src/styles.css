@@ -569,11 +569,11 @@ footer {
 /* Fee labels under ticket buttons */
 .ticket-fee-label {
   display: block;
-  font-size: 8px;
-  opacity: 0.6;
+  font-size: 9px;
+  opacity: 0.85;
   letter-spacing: 0.3px;
-  margin-top: 1px;
-  font-weight: 300;
+  margin-top: 2px;
+  font-weight: 400;
 }
 
 /* Share button */
