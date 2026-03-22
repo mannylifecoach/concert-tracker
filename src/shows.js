@@ -1,6 +1,7 @@
 import { fetchEventsByAttractionId, searchAttractions, getBestImage } from './api.js';
 import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage } from './seatgeek.js';
 import { state, saveArtists } from './state.js';
+import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
 
 const gradients = [
   'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -25,15 +26,22 @@ function isFestival(event) {
   return /\bfest(ival)?\b/.test(name);
 }
 
+function getArtistSocials(artistName) {
+  const artist = state.artists.find((a) => a.name.toLowerCase() === artistName.toLowerCase());
+  return artist?.socials || {};
+}
+
 function parseTMEvent(event, artistName, index) {
   const venue = event._embedded?.venues?.[0];
   const image = getBestImage(event.images);
+  const venueName = venue?.name || 'TBA';
+  const socials = getArtistSocials(artistName);
 
   return {
     id: `tm-${event.id}`,
     artist: artistName,
     name: event.name,
-    venue: venue?.name || 'TBA',
+    venue: venueName,
     city: venue?.city?.name || '',
     state: venue?.state?.stateCode || '',
     country: venue?.country?.countryCode || '',
@@ -43,18 +51,24 @@ function parseTMEvent(event, artistName, index) {
     gradient: gradients[index % gradients.length],
     source: 'ticketmaster',
     isFestival: isFestival(event),
+    socials,
+    artistHomepage: socials.homepage || null,
+    tickPickUrl: buildTickPickUrl(artistName, venueName),
+    diceUrl: buildDiceUrl(artistName),
   };
 }
 
 function parseSGEvent(event, artistName, index) {
   const venue = event.venue || {};
   const image = getSeatGeekImage(event);
+  const venueName = venue.name || 'TBA';
+  const socials = getArtistSocials(artistName);
 
   return {
     id: `sg-${event.id}`,
     artist: artistName,
     name: event.title || event.short_title,
-    venue: venue.name || 'TBA',
+    venue: venueName,
     city: venue.city || '',
     state: venue.state || '',
     country: venue.country || '',
@@ -64,6 +78,10 @@ function parseSGEvent(event, artistName, index) {
     gradient: gradients[index % gradients.length],
     source: 'seatgeek',
     isFestival: isFestival(event),
+    socials,
+    artistHomepage: socials.homepage || null,
+    tickPickUrl: buildTickPickUrl(artistName, venueName),
+    diceUrl: buildDiceUrl(artistName),
   };
 }
 
@@ -135,11 +153,13 @@ function dedupeShows(shows) {
         existing.altTicketUrl = show.ticketUrl;
         existing.altSource = 'seatgeek';
         existing.isFestival = existing.isFestival || show.isFestival;
+        if (!existing.artistHomepage) existing.artistHomepage = show.artistHomepage;
       } else if (show.source === 'ticketmaster' && existing.source === 'seatgeek') {
         show.altTicketUrl = existing.ticketUrl;
         show.altSource = 'seatgeek';
         show.isFestival = show.isFestival || existing.isFestival;
         if (!show.image && existing.image) show.image = existing.image;
+        if (!show.artistHomepage) show.artistHomepage = existing.artistHomepage;
         deduped.set(key, show);
       }
     } else {

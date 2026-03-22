@@ -63,11 +63,58 @@ function renderSourceBadge(show) {
 }
 
 function renderTicketLinks(show) {
-  let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn">${show.source === 'seatgeek' ? 'seatgeek' : 'tickets'}</a>`;
+  // Primary sources
+  let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn ticket-btn-primary" title="${show.source === 'seatgeek' ? 'fees vary' : '~25% fees'}">
+    ${show.source === 'seatgeek' ? 'seatgeek' : 'ticketmaster'}
+    <span class="ticket-fee-label">${show.source === 'seatgeek' ? 'varies' : '~25% fees'}</span>
+  </a>`;
+
   if (show.altTicketUrl) {
-    html += `<a href="${escapeHtml(show.altTicketUrl)}" target="_blank" class="ticket-btn ticket-btn-alt">${show.altSource === 'seatgeek' ? 'seatgeek' : 'tickets'}</a>`;
+    html += `<a href="${escapeHtml(show.altTicketUrl)}" target="_blank" class="ticket-btn ticket-btn-alt" title="${show.altSource === 'seatgeek' ? 'fees vary' : '~25% fees'}">
+      ${show.altSource === 'seatgeek' ? 'seatgeek' : 'ticketmaster'}
+      <span class="ticket-fee-label">${show.altSource === 'seatgeek' ? 'varies' : '~25% fees'}</span>
+    </a>`;
   }
+
+  // Alternative sources — no/low fees
+  html += `<a href="${escapeHtml(show.tickPickUrl)}" target="_blank" class="ticket-btn ticket-btn-tickpick" title="no fees">
+    tickpick
+    <span class="ticket-fee-label">no fees</span>
+  </a>`;
+
+  html += `<a href="${escapeHtml(show.diceUrl)}" target="_blank" class="ticket-btn ticket-btn-dice" title="face value only">
+    dice
+    <span class="ticket-fee-label">face value</span>
+  </a>`;
+
+  // Artist direct
+  if (show.artistHomepage) {
+    html += `<a href="${escapeHtml(show.artistHomepage)}" target="_blank" class="ticket-btn ticket-btn-direct" title="buy direct from artist">
+      artist site
+      <span class="ticket-fee-label">direct</span>
+    </a>`;
+  }
+
   return html;
+}
+
+function renderCardSocials(show) {
+  const socials = show.socials || {};
+  const platforms = ['instagram', 'twitter', 'spotify', 'youtube', 'homepage'];
+  const links = [];
+
+  for (const platform of platforms) {
+    if (socials[platform]) {
+      links.push(`
+        <a href="${escapeHtml(socials[platform])}" target="_blank" class="card-social-link card-social-${platform}" title="${platform}" onclick="event.stopPropagation()">
+          ${socialIcons[platform]}
+        </a>
+      `);
+    }
+  }
+
+  if (links.length === 0) return '';
+  return `<div class="card-social-links">${links.join('')}</div>`;
 }
 
 function buildShareText(show) {
@@ -233,7 +280,10 @@ function renderApp() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                     </button>
                   </div>
-                  <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
+                  <div class="show-artist-row">
+                    <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
+                    ${renderCardSocials(show)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,7 +292,7 @@ function renderApp() {
       `}
 
       <footer>
-        ✦ powered by ticketmaster + seatgeek
+        ✦ powered by ticketmaster + seatgeek · alt links via tickpick + dice
       </footer>
     </div>
   `;
