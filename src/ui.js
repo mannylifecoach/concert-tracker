@@ -3,6 +3,10 @@ import { state, saveArtists, saveCitySearch } from './state.js';
 import { fetchAllShows, fetchCityShows } from './shows.js';
 import { searchCities } from './geocode.js';
 
+function track(event, data) {
+  if (typeof umami !== 'undefined') umami.track(event, data);
+}
+
 let debounceTimer = null;
 let autocompleteResults = [];
 let cityAutocompleteResults = [];
@@ -155,6 +159,7 @@ async function handleShare(showId) {
   const show = allShows.find((s) => s.id === showId);
   if (!show) return;
 
+  track('show-shared', { artist: show.artist, venue: show.venue });
   const text = buildShareText(show);
   const url = show.ticketUrl !== '#' ? show.ticketUrl : '';
   const shareData = {
@@ -406,6 +411,7 @@ function renderApp() {
 function addArtist(attraction) {
   if (state.artists.some((a) => a.id === attraction.id)) return;
 
+  track('artist-added', { artist: attraction.name });
   state.artists.push({
     id: attraction.id,
     name: attraction.name,
@@ -428,6 +434,7 @@ function removeArtist(name) {
 }
 
 function selectCity(city) {
+  track('city-searched', { city: city.name });
   state.citySearch = {
     name: city.name,
     lat: city.lat,
@@ -448,6 +455,7 @@ function removeCity() {
 
 function setRadius(radius) {
   if (!state.citySearch) return;
+  track('radius-changed', { radius });
   state.citySearch.radius = radius;
   saveCitySearch();
   fetchCityShows(render);
@@ -510,6 +518,7 @@ function bindEvents() {
   document.querySelectorAll('.view-toggle-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
+      track('view-toggled', { view: btn.dataset.view });
       render();
     });
   });
