@@ -14,39 +14,10 @@ export default function handler() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f3460 100%)',
+          background: '#0a0a0a',
           position: 'relative',
         },
         children: [
-          // Decorative blurred circles
-          {
-            type: 'div',
-            props: {
-              style: {
-                position: 'absolute',
-                top: '-50px',
-                left: '-50px',
-                width: '400px',
-                height: '400px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(199,44,65,0.15) 0%, transparent 70%)',
-              },
-            },
-          },
-          {
-            type: 'div',
-            props: {
-              style: {
-                position: 'absolute',
-                bottom: '-80px',
-                right: '-50px',
-                width: '500px',
-                height: '500px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(60,9,108,0.2) 0%, transparent 70%)',
-              },
-            },
-          },
           // Main title
           {
             type: 'div',
@@ -81,11 +52,11 @@ export default function handler() {
             type: 'div',
             props: {
               style: {
-                width: '200px',
-                height: '2px',
-                background: 'rgba(255,255,255,0.15)',
+                width: '120px',
+                height: '1px',
+                background: 'rgba(255,255,255,0.1)',
                 borderRadius: '1px',
-                marginBottom: '32px',
+                marginBottom: '24px',
               },
             },
           },
@@ -136,7 +107,7 @@ export default function handler() {
     },
     {
       width: 1200,
-      height: 630,
+      height: 400,
     },
   );
 }
