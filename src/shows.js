@@ -85,16 +85,38 @@ function parseSGEvent(event, artistName, index) {
   };
 }
 
+function simplifyName(name) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim();
+}
+
 async function resolveSeatGeekId(artist) {
   if (artist.seatgeekId) return artist.seatgeekId;
 
   try {
-    const performers = await searchPerformers(artist.name);
+    // Try exact name first
+    let performers = await searchPerformers(artist.name);
+
+    // Fallback: try simplified name (strip accents, special chars)
+    if (performers.length === 0) {
+      const simplified = simplifyName(artist.name);
+      if (simplified !== artist.name) {
+        console.log(`SeatGeek: no match for "${artist.name}", retrying as "${simplified}"`);
+        performers = await searchPerformers(simplified);
+      }
+    }
+
     if (performers.length > 0) {
+      console.log(`SeatGeek: matched "${artist.name}" → performer ID ${performers[0].id}`);
       artist.seatgeekId = performers[0].id;
       saveArtists();
       return artist.seatgeekId;
     }
+
+    console.warn(`SeatGeek: no performer match found for "${artist.name}"`);
   } catch (err) {
     console.error(`SeatGeek performer lookup failed for ${artist.name}:`, err);
   }
@@ -118,6 +140,7 @@ async function fetchTMShows(artist) {
       }
     }
 
+    console.log(`TM: ${events.length} events for "${artist.name}"`);
     return events.map((event, i) => parseTMEvent(event, artist.name, i));
   } catch (err) {
     console.error(`TM error for ${artist.name}:`, err);
@@ -131,6 +154,7 @@ async function fetchSGShows(artist) {
     if (!performerId) return [];
 
     const events = await fetchEventsByPerformerId(performerId);
+    console.log(`SG: ${events.length} events for "${artist.name}"`);
     return events.map((event, i) => parseSGEvent(event, artist.name, i));
   } catch (err) {
     console.error(`SeatGeek error for ${artist.name}:`, err);

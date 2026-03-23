@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         client_id: clientId,
         'performers.id': performerId,
         sort: 'datetime_local.asc',
-        per_page: '50',
+        per_page: '200',
       });
       url = `${SG_BASE}/events?${params}`;
     } else if (action === 'cityEvents') {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         lon,
         range: `${radius || '100'}mi`,
         sort: 'datetime_local.asc',
-        per_page: '50',
+        per_page: '200',
         type: 'concert',
       });
       url = `${SG_BASE}/events?${params}`;

@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         apikey: apiKey,
         attractionId,
         classificationName: 'music',
-        size: '50',
+        size: '200',
         sort: 'date,asc',
         locale: '*',
       });
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         radius: radius || '100',
         unit: 'miles',
         classificationName: 'music',
-        size: '50',
+        size: '200',
         sort: 'date,asc',
         locale: '*',
       });
