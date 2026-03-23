@@ -1,11 +1,16 @@
 import { searchAttractions } from './api.js';
-import { state, saveArtists } from './state.js';
-import { fetchAllShows } from './shows.js';
+import { state, saveArtists, saveCitySearch } from './state.js';
+import { fetchAllShows, fetchCityShows } from './shows.js';
+import { searchCities } from './geocode.js';
 
 let debounceTimer = null;
 let autocompleteResults = [];
-let expandedArtist = null; // which artist's social panel is open
-let discordEditArtist = null; // which artist is being edited for discord
+let cityAutocompleteResults = [];
+let cityDebounceTimer = null;
+let expandedArtist = null;
+let discordEditArtist = null;
+
+const RADIUS_OPTIONS = [25, 50, 100, 200];
 
 const socialIcons = {
   instagram: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`,
@@ -38,20 +43,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-function renderAutocomplete() {
-  if (autocompleteResults.length === 0) return '';
-  return `
-    <div class="autocomplete-dropdown">
-      ${autocompleteResults.map((a) => `
-        <button class="autocomplete-item" data-id="${escapeHtml(a.id)}" data-name="${escapeHtml(a.name)}" data-socials='${escapeHtml(JSON.stringify(a.socials || {}))}' data-festival="${a.isFestival ? 'true' : 'false'}">
-          ${a.imageUrl ? `<img src="${escapeHtml(a.imageUrl)}" alt="" class="autocomplete-img">` : '<div class="autocomplete-img placeholder"></div>'}
-          <span>${escapeHtml(a.name)}</span>
-          ${a.isFestival ? '<span class="autocomplete-festival-tag">festival</span>' : ''}
-        </button>
-      `).join('')}
-    </div>
-  `;
-}
+// --- Shared show card rendering ---
 
 function renderSourceBadge(show) {
   const label = show.source === 'seatgeek' ? 'sg' : 'tm';
@@ -63,7 +55,6 @@ function renderSourceBadge(show) {
 }
 
 function renderTicketLinks(show) {
-  // Primary sources
   let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn ticket-btn-primary" title="${show.source === 'seatgeek' ? 'fees vary' : '~25% fees'}">
     ${show.source === 'seatgeek' ? 'seatgeek' : 'ticketmaster'}
     <span class="ticket-fee-label">${show.source === 'seatgeek' ? 'varies' : '~25% fees'}</span>
@@ -76,7 +67,6 @@ function renderTicketLinks(show) {
     </a>`;
   }
 
-  // Alternative sources — no/low fees
   html += `<a href="${escapeHtml(show.tickPickUrl)}" target="_blank" class="ticket-btn ticket-btn-tickpick" title="no fees">
     tickpick
     <span class="ticket-fee-label">no fees</span>
@@ -87,7 +77,6 @@ function renderTicketLinks(show) {
     <span class="ticket-fee-label">face value</span>
   </a>`;
 
-  // Artist direct
   if (show.artistHomepage) {
     html += `<a href="${escapeHtml(show.artistHomepage)}" target="_blank" class="ticket-btn ticket-btn-direct" title="buy direct from artist">
       artist site
@@ -117,6 +106,42 @@ function renderCardSocials(show) {
   return `<div class="card-social-links">${links.join('')}</div>`;
 }
 
+function renderShowCard(show) {
+  return `
+    <div class="show-card">
+      <div class="show-card-bg" style="background: ${getCardBackground(show)}; background-size: cover; background-position: center;"></div>
+      <div class="show-card-overlay"></div>
+      <div class="show-card-content">
+        <div class="show-date">${formatDate(show.date)} ${renderSourceBadge(show)}</div>
+        <div class="show-venue">${escapeHtml(show.venue)}</div>
+        <div class="show-city">${escapeHtml(formatLocation(show))}</div>
+        <div class="show-footer">
+          <div class="ticket-links">
+            ${renderTicketLinks(show)}
+            <button class="share-btn" data-share-id="${escapeHtml(show.id)}" title="share">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
+          </div>
+          <div class="show-artist-row">
+            <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
+            ${renderCardSocials(show)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderShowsGrid(shows) {
+  return `
+    <div class="shows-grid">
+      ${shows.map((show) => renderShowCard(show)).join('')}
+    </div>
+  `;
+}
+
+// --- Share ---
+
 function buildShareText(show) {
   const date = formatDate(show.date);
   const location = formatLocation(show);
@@ -124,7 +149,8 @@ function buildShareText(show) {
 }
 
 async function handleShare(showId) {
-  const show = state.shows.find((s) => s.id === showId);
+  const allShows = [...state.shows, ...state.cityShows];
+  const show = allShows.find((s) => s.id === showId);
   if (!show) return;
 
   const text = buildShareText(show);
@@ -135,7 +161,6 @@ async function handleShare(showId) {
     url,
   };
 
-  // Use native share on mobile, fallback to copy
   if (navigator.share) {
     try {
       await navigator.share(shareData);
@@ -168,6 +193,41 @@ function showCopyToast() {
   }, 2500);
 }
 
+// --- Artist autocomplete ---
+
+function renderAutocomplete() {
+  if (autocompleteResults.length === 0) return '';
+  return `
+    <div class="autocomplete-dropdown">
+      ${autocompleteResults.map((a) => `
+        <button class="autocomplete-item" data-id="${escapeHtml(a.id)}" data-name="${escapeHtml(a.name)}" data-socials='${escapeHtml(JSON.stringify(a.socials || {}))}' data-festival="${a.isFestival ? 'true' : 'false'}">
+          ${a.imageUrl ? `<img src="${escapeHtml(a.imageUrl)}" alt="" class="autocomplete-img">` : '<div class="autocomplete-img placeholder"></div>'}
+          <span>${escapeHtml(a.name)}</span>
+          ${a.isFestival ? '<span class="autocomplete-festival-tag">festival</span>' : ''}
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+// --- City autocomplete ---
+
+function renderCityAutocomplete() {
+  if (cityAutocompleteResults.length === 0) return '';
+  return `
+    <div class="autocomplete-dropdown">
+      ${cityAutocompleteResults.map((c) => `
+        <button class="city-autocomplete-item" data-name="${escapeHtml(c.name)}" data-lat="${c.lat}" data-lon="${c.lon}">
+          <svg class="city-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span>${escapeHtml(c.name)}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+// --- Artist socials panel ---
+
 function renderSocialLinks(artist) {
   const socials = artist.socials || {};
   const platforms = ['discord', 'instagram', 'twitter', 'spotify', 'youtube', 'facebook', 'homepage'];
@@ -183,7 +243,6 @@ function renderSocialLinks(artist) {
     }
   }
 
-  // Always show Discord add button if no Discord link
   if (!socials.discord) {
     links.push(`
       <button class="social-link social-discord social-add" data-artist="${escapeHtml(artist.name)}" title="add discord">
@@ -216,80 +275,122 @@ function renderArtistSocials(artist) {
   `;
 }
 
-function renderApp() {
+// --- View: Artists ---
+
+function renderArtistsView() {
   const filteredShows = state.activeFilter
     ? state.shows.filter((s) => s.artist.toLowerCase() === state.activeFilter.toLowerCase())
     : state.shows;
 
   return `
+    <div class="artist-filters">
+      <button class="artist-filter ${!state.activeFilter ? 'active' : ''}" data-filter="all">all</button>
+      ${state.artists.map((artist) => `
+        <div class="artist-filter-group">
+          <button class="artist-filter ${state.activeFilter === artist.name ? 'active' : ''}" data-filter="${escapeHtml(artist.name)}">
+            ${escapeHtml(artist.name.toLowerCase())}${artist.isFestival ? '<span class="filter-festival-tag">fest</span>' : ''}
+            <span class="socials-toggle" data-socials-toggle="${escapeHtml(artist.name)}">↗</span>
+            <span class="remove" data-remove="${escapeHtml(artist.name)}">×</span>
+          </button>
+          ${renderArtistSocials(artist)}
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="add-artist-section">
+      <div class="add-artist-wrapper">
+        <form class="add-artist-form" id="add-artist-form">
+          <input
+            type="text"
+            class="add-artist-input"
+            id="artist-input"
+            placeholder="search artist.."
+            autocomplete="off"
+          >
+        </form>
+        ${renderAutocomplete()}
+      </div>
+    </div>
+
+    ${state.loading ? `
+      <div class="state-message">loading shows..</div>
+    ` : state.error ? `
+      <div class="state-message error">${escapeHtml(state.error)}</div>
+    ` : state.artists.length === 0 ? `
+      <div class="state-message">search for an artist to see their upcoming shows</div>
+    ` : filteredShows.length === 0 ? `
+      <div class="state-message">no upcoming shows found</div>
+    ` : renderShowsGrid(filteredShows)}
+  `;
+}
+
+// --- View: Nearby ---
+
+function renderRadiusToggle() {
+  const currentRadius = state.citySearch?.radius || 100;
+  return `
+    <div class="radius-toggle">
+      ${RADIUS_OPTIONS.map((r) => `
+        <button class="radius-btn ${currentRadius === r ? 'active' : ''}" data-radius="${r}">${r}mi</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderNearbyView() {
+  return `
+    <div class="city-search-section">
+      <div class="city-search-wrapper">
+        <form class="city-search-form" id="city-search-form">
+          <input
+            type="text"
+            class="add-artist-input"
+            id="city-input"
+            placeholder="search city.."
+            autocomplete="off"
+          >
+        </form>
+        ${renderCityAutocomplete()}
+      </div>
+      ${renderRadiusToggle()}
+    </div>
+
+    ${state.citySearch ? `
+      <div class="active-city">
+        <span class="active-city-name">${escapeHtml(state.citySearch.name)}</span>
+        <span class="active-city-radius">${state.citySearch.radius}mi</span>
+        <button class="active-city-remove" id="remove-city">×</button>
+      </div>
+    ` : ''}
+
+    ${state.cityLoading ? `
+      <div class="state-message">loading nearby shows..</div>
+    ` : state.cityError ? `
+      <div class="state-message error">${escapeHtml(state.cityError)}</div>
+    ` : !state.citySearch ? `
+      <div class="state-message">search for a city to see nearby shows</div>
+    ` : state.cityShows.length === 0 ? `
+      <div class="state-message">no upcoming shows found nearby</div>
+    ` : renderShowsGrid(state.cityShows)}
+  `;
+}
+
+// --- Main render ---
+
+function renderApp() {
+  return `
     <div class="container">
       <header>
-        <div class="logo">shows..</div>
-        <div class="artist-filters">
-          <button class="artist-filter ${!state.activeFilter ? 'active' : ''}" data-filter="all">all</button>
-          ${state.artists.map((artist) => `
-            <div class="artist-filter-group">
-              <button class="artist-filter ${state.activeFilter === artist.name ? 'active' : ''}" data-filter="${escapeHtml(artist.name)}">
-                ${escapeHtml(artist.name.toLowerCase())}${artist.isFestival ? '<span class="filter-festival-tag">fest</span>' : ''}
-                <span class="socials-toggle" data-socials-toggle="${escapeHtml(artist.name)}">↗</span>
-                <span class="remove" data-remove="${escapeHtml(artist.name)}">×</span>
-              </button>
-              ${renderArtistSocials(artist)}
-            </div>
-          `).join('')}
+        <div class="header-top">
+          <div class="logo">shows..</div>
+          <div class="view-toggle">
+            <button class="view-toggle-btn ${state.viewMode === 'artists' ? 'active' : ''}" data-view="artists">artists</button>
+            <button class="view-toggle-btn ${state.viewMode === 'nearby' ? 'active' : ''}" data-view="nearby">nearby</button>
+          </div>
         </div>
       </header>
 
-      <div class="add-artist-section">
-        <div class="add-artist-wrapper">
-          <form class="add-artist-form" id="add-artist-form">
-            <input
-              type="text"
-              class="add-artist-input"
-              id="artist-input"
-              placeholder="search artist.."
-              autocomplete="off"
-            >
-          </form>
-          ${renderAutocomplete()}
-        </div>
-      </div>
-
-      ${state.loading ? `
-        <div class="state-message">loading shows..</div>
-      ` : state.error ? `
-        <div class="state-message error">${escapeHtml(state.error)}</div>
-      ` : state.artists.length === 0 ? `
-        <div class="state-message">search for an artist to see their upcoming shows</div>
-      ` : filteredShows.length === 0 ? `
-        <div class="state-message">no upcoming shows found</div>
-      ` : `
-        <div class="shows-grid">
-          ${filteredShows.map((show) => `
-            <div class="show-card">
-              <div class="show-card-bg" style="background: ${getCardBackground(show)}; background-size: cover; background-position: center;"></div>
-              <div class="show-card-overlay"></div>
-              <div class="show-card-content">
-                <div class="show-date">${formatDate(show.date)} ${renderSourceBadge(show)}</div>
-                <div class="show-venue">${escapeHtml(show.venue)}</div>
-                <div class="show-city">${escapeHtml(formatLocation(show))}</div>
-                <div class="show-footer">
-                  <div class="ticket-links">
-                    ${renderTicketLinks(show)}
-                    <button class="share-btn" data-share-id="${escapeHtml(show.id)}" title="share">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                    </button>
-                  </div>
-                  <div class="show-artist-row">
-                    <span class="show-artist">${escapeHtml(show.artist.toLowerCase())}</span>
-                    ${renderCardSocials(show)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `}
+      ${state.viewMode === 'artists' ? renderArtistsView() : renderNearbyView()}
 
       <footer>
         ✦ powered by ticketmaster + seatgeek · alt links via tickpick + dice
@@ -297,6 +398,8 @@ function renderApp() {
     </div>
   `;
 }
+
+// --- Actions ---
 
 function addArtist(attraction) {
   if (state.artists.some((a) => a.id === attraction.id)) return;
@@ -322,6 +425,34 @@ function removeArtist(name) {
   render();
 }
 
+function selectCity(city) {
+  state.citySearch = {
+    name: city.name,
+    lat: city.lat,
+    lon: city.lon,
+    radius: state.citySearch?.radius || 100,
+  };
+  saveCitySearch();
+  cityAutocompleteResults = [];
+  fetchCityShows(render);
+}
+
+function removeCity() {
+  state.citySearch = null;
+  state.cityShows = [];
+  saveCitySearch();
+  render();
+}
+
+function setRadius(radius) {
+  if (!state.citySearch) return;
+  state.citySearch.radius = radius;
+  saveCitySearch();
+  fetchCityShows(render);
+}
+
+// --- Search handlers ---
+
 function handleSearchInput(value) {
   clearTimeout(debounceTimer);
 
@@ -346,7 +477,42 @@ function handleSearchInput(value) {
   }, 300);
 }
 
+function handleCitySearchInput(value) {
+  clearTimeout(cityDebounceTimer);
+
+  if (!value.trim()) {
+    cityAutocompleteResults = [];
+    render();
+    return;
+  }
+
+  cityDebounceTimer = setTimeout(async () => {
+    try {
+      cityAutocompleteResults = await searchCities(value);
+      render();
+      const input = document.getElementById('city-input');
+      if (input) {
+        input.value = value;
+        input.focus();
+      }
+    } catch (err) {
+      console.error('City search failed:', err);
+    }
+  }, 400);
+}
+
+// --- Event binding ---
+
 function bindEvents() {
+  // View toggle
+  document.querySelectorAll('.view-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.viewMode = btn.dataset.view;
+      render();
+    });
+  });
+
+  // --- Artists view events ---
   const artistInput = document.getElementById('artist-input');
   artistInput?.addEventListener('input', (e) => handleSearchInput(e.target.value));
 
@@ -354,7 +520,6 @@ function bindEvents() {
     e.preventDefault();
   });
 
-  // Autocomplete item clicks
   document.querySelectorAll('.autocomplete-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       let socials = {};
@@ -363,12 +528,17 @@ function bindEvents() {
     });
   });
 
-  // Close autocomplete and socials panel when clicking/tapping outside
+  // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
     let needsRender = false;
 
     if (!e.target.closest('.add-artist-wrapper') && autocompleteResults.length > 0) {
       autocompleteResults = [];
+      needsRender = true;
+    }
+
+    if (!e.target.closest('.city-search-wrapper') && cityAutocompleteResults.length > 0) {
+      cityAutocompleteResults = [];
       needsRender = true;
     }
 
@@ -381,7 +551,7 @@ function bindEvents() {
     if (needsRender) render();
   });
 
-  // Filter buttons
+  // Artist filter buttons
   document.querySelectorAll('.artist-filter').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       if (e.target.classList.contains('remove')) return;
@@ -437,14 +607,6 @@ function bindEvents() {
     }
   });
 
-  // Share buttons
-  document.querySelectorAll('.share-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleShare(btn.dataset.shareId);
-    });
-  });
-
   // Remove artist buttons
   document.querySelectorAll('.remove').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -452,12 +614,45 @@ function bindEvents() {
       removeArtist(btn.dataset.remove);
     });
   });
+
+  // --- Nearby view events ---
+  const cityInput = document.getElementById('city-input');
+  cityInput?.addEventListener('input', (e) => handleCitySearchInput(e.target.value));
+
+  document.getElementById('city-search-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+  });
+
+  // City autocomplete clicks
+  document.querySelectorAll('.city-autocomplete-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectCity({ name: btn.dataset.name, lat: btn.dataset.lat, lon: btn.dataset.lon });
+    });
+  });
+
+  // Radius buttons
+  document.querySelectorAll('.radius-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setRadius(Number(btn.dataset.radius));
+    });
+  });
+
+  // Remove city
+  document.getElementById('remove-city')?.addEventListener('click', removeCity);
+
+  // --- Shared events ---
+  // Share buttons
+  document.querySelectorAll('.share-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleShare(btn.dataset.shareId);
+    });
+  });
 }
 
 function showToasts() {
   if (!state.noShowArtists || state.noShowArtists.length === 0) return;
 
-  // Remove any existing toast container
   document.getElementById('toast-container')?.remove();
 
   const container = document.createElement('div');
@@ -472,9 +667,7 @@ function showToasts() {
 
     setTimeout(() => {
       container.appendChild(toast);
-      // Trigger animation
       requestAnimationFrame(() => toast.classList.add('toast-visible'));
-      // Auto dismiss after 4s
       setTimeout(() => {
         toast.classList.remove('toast-visible');
         toast.addEventListener('transitionend', () => toast.remove());
@@ -482,7 +675,6 @@ function showToasts() {
     }, i * 300);
   });
 
-  // Clear so we don't re-show on next render
   state.noShowArtists = [];
 }
 
@@ -497,5 +689,8 @@ export function init() {
   render();
   if (state.artists.length > 0) {
     fetchAllShows(render);
+  }
+  if (state.citySearch) {
+    fetchCityShows(render);
   }
 }

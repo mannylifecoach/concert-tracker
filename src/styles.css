@@ -38,12 +38,14 @@ body::before {
 
 /* Header */
 header {
-  padding: 32px 24px;
+  padding: 32px 24px 16px;
+}
+
+.header-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .logo {
@@ -51,6 +53,41 @@ header {
   font-weight: 400;
   letter-spacing: 0.5px;
   text-transform: lowercase;
+}
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 6px 16px;
+  cursor: pointer;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn:not(:last-child) {
+  border-right: 1px solid #2a2a2a;
+}
+
+.view-toggle-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+.view-toggle-btn:not(.active):hover {
+  color: #fff;
 }
 
 .artist-filters {
@@ -454,6 +491,138 @@ header {
 .card-social-youtube:hover { color: #ff0000; }
 .card-social-homepage:hover { color: #fff; }
 
+/* City search */
+.city-search-section {
+  padding: 0 24px 24px;
+  border-bottom: 1px solid #1a1a1a;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.city-search-wrapper {
+  position: relative;
+  max-width: 400px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.city-search-form {
+  display: flex;
+  gap: 12px;
+}
+
+.city-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ccc;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.city-autocomplete-item:hover {
+  background: #222;
+  color: #fff;
+}
+
+.city-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.city-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #666;
+}
+
+.city-autocomplete-item:hover .city-icon {
+  color: #fff;
+}
+
+/* Radius toggle */
+.radius-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.radius-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+}
+
+.radius-btn:not(:last-child) {
+  border-right: 1px solid #2a2a2a;
+}
+
+.radius-btn.active {
+  background: #fff;
+  color: #000;
+}
+
+.radius-btn:not(.active):hover {
+  color: #fff;
+}
+
+/* Active city pill */
+.active-city {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px 24px;
+  font-size: 12px;
+  color: #888;
+  text-transform: lowercase;
+}
+
+.active-city-name {
+  color: #fff;
+  font-weight: 400;
+}
+
+.active-city-radius {
+  color: #555;
+  font-size: 11px;
+}
+
+.active-city-remove {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.2s;
+  font-family: inherit;
+}
+
+.active-city-remove:hover {
+  color: #fff;
+}
+
 /* Footer */
 footer {
   padding: 48px 24px;
@@ -644,9 +813,11 @@ footer {
 @media (max-width: 768px) {
   /* Header */
   header {
-    flex-direction: column;
-    padding: 20px 16px;
-    gap: 12px;
+    padding: 20px 16px 12px;
+  }
+
+  .header-top {
+    margin-bottom: 12px;
   }
 
   .artist-filters {
@@ -704,10 +875,31 @@ footer {
     font-size: 13px;
   }
 
-  /* Add artist section */
+  /* Add artist / city search section */
   .add-artist-section {
     padding: 0 16px 24px;
     margin-bottom: 24px;
+  }
+
+  .city-search-section {
+    padding: 0 16px 20px;
+    margin-bottom: 24px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .city-search-wrapper {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .radius-toggle {
+    align-self: flex-start;
+  }
+
+  .active-city {
+    padding: 0 16px 20px;
   }
 
   .add-artist-wrapper {

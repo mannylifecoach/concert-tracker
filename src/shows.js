@@ -1,5 +1,5 @@
-import { fetchEventsByAttractionId, searchAttractions, getBestImage } from './api.js';
-import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage } from './seatgeek.js';
+import { fetchEventsByAttractionId, searchAttractions, getBestImage, fetchEventsByLocation as fetchTMByLocation } from './api.js';
+import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage, fetchEventsByLocation as fetchSGByLocation } from './seatgeek.js';
 import { state, saveArtists } from './state.js';
 import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
 
@@ -168,6 +168,54 @@ function dedupeShows(shows) {
   }
 
   return Array.from(deduped.values());
+}
+
+function parseTMCityEvent(event, index) {
+  const artistName = event._embedded?.attractions?.[0]?.name || event.name || 'Unknown';
+  return parseTMEvent(event, artistName, index);
+}
+
+function parseSGCityEvent(event, index) {
+  const artistName = event.performers?.[0]?.name || event.short_title || event.title || 'Unknown';
+  return parseSGEvent(event, artistName, index);
+}
+
+export async function fetchCityShows(renderFn) {
+  if (!state.citySearch) {
+    state.cityShows = [];
+    renderFn();
+    return;
+  }
+
+  state.cityLoading = true;
+  state.cityError = null;
+  renderFn();
+
+  try {
+    const { lat, lon, radius } = state.citySearch;
+
+    const [tmEvents, sgEvents] = await Promise.all([
+      fetchTMByLocation(lat, lon, radius).catch((err) => {
+        console.error('TM city search error:', err);
+        return [];
+      }),
+      fetchSGByLocation(lat, lon, radius).catch((err) => {
+        console.error('SG city search error:', err);
+        return [];
+      }),
+    ]);
+
+    const tmShows = tmEvents.map((e, i) => parseTMCityEvent(e, i));
+    const sgShows = sgEvents.map((e, i) => parseSGCityEvent(e, i));
+
+    state.cityShows = dedupeShows([...tmShows, ...sgShows]).sort((a, b) => a.date - b.date);
+    state.cityLoading = false;
+  } catch {
+    state.cityError = 'Failed to fetch nearby shows. Please try again.';
+    state.cityLoading = false;
+  }
+
+  renderFn();
 }
 
 export async function fetchAllShows(renderFn) {

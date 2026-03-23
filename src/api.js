@@ -70,6 +70,22 @@ function parseSocials(externalLinks) {
 }
 
 /**
+ * Fetch music events near a location via our serverless proxy.
+ */
+export async function fetchEventsByLocation(lat, lon, radius) {
+  const params = new URLSearchParams({ action: 'cityEvents', lat, lon, radius: String(radius) });
+  const res = await fetch(`/api/ticketmaster?${params}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch nearby events');
+  }
+
+  const data = await res.json();
+  return data._embedded?.events || [];
+}
+
+/**
  * Pick the best image from a Ticketmaster images array.
  */
 export function getBestImage(images) {

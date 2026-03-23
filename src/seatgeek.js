@@ -38,6 +38,22 @@ export async function fetchEventsByPerformerId(performerId) {
 }
 
 /**
+ * Fetch music events near a location via our serverless proxy.
+ */
+export async function fetchEventsByLocation(lat, lon, radius) {
+  const params = new URLSearchParams({ action: 'cityEvents', lat, lon, radius: String(radius) });
+  const res = await fetch(`/api/seatgeek?${params}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch nearby SeatGeek events');
+  }
+
+  const data = await res.json();
+  return data.events || [];
+}
+
+/**
  * Pick the best image from a SeatGeek event's performers.
  */
 export function getSeatGeekImage(event) {

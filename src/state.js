@@ -1,4 +1,5 @@
 const ARTISTS_KEY = 'concert_tracker_artists';
+const CITY_KEY = 'concert_tracker_city';
 
 /**
  * App state — single source of truth.
@@ -6,12 +7,22 @@ const ARTISTS_KEY = 'concert_tracker_artists';
  * Artists are stored as { id, name, seatgeekId, socials } objects.
  */
 export const state = {
+  // View mode
+  viewMode: 'artists', // 'artists' | 'nearby'
+
+  // Artist view state
   artists: loadArtists(),
   shows: [],
   activeFilter: null,
   loading: false,
   error: null,
   noShowArtists: [],
+
+  // Nearby view state
+  citySearch: loadCitySearch(), // { name, lat, lon, radius } or null
+  cityShows: [],
+  cityLoading: false,
+  cityError: null,
 };
 
 function loadArtists() {
@@ -28,6 +39,24 @@ function loadArtists() {
   }
 }
 
+function loadCitySearch() {
+  try {
+    const raw = localStorage.getItem(CITY_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function saveArtists() {
   localStorage.setItem(ARTISTS_KEY, JSON.stringify(state.artists));
+}
+
+export function saveCitySearch() {
+  if (state.citySearch) {
+    localStorage.setItem(CITY_KEY, JSON.stringify(state.citySearch));
+  } else {
+    localStorage.removeItem(CITY_KEY);
+  }
 }
