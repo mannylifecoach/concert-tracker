@@ -50,7 +50,8 @@ function escapeHtml(str) {
 // --- Shared show card rendering ---
 
 function renderSourceBadge(show) {
-  const label = show.source === 'seatgeek' ? 'sg' : 'tm';
+  const labels = { seatgeek: 'sg', ticketmaster: 'tm', edmtrain: 'et' };
+  const label = labels[show.source] || show.source;
   let html = `<span class="source-badge source-${show.source}">${label}</span>`;
   if (show.isFestival) {
     html += `<span class="source-badge badge-festival">festival</span>`;
@@ -59,9 +60,13 @@ function renderSourceBadge(show) {
 }
 
 function renderTicketLinks(show) {
-  let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn ticket-btn-primary" title="${show.source === 'seatgeek' ? 'fees vary' : '~25% fees'}">
-    ${show.source === 'seatgeek' ? 'seatgeek' : 'ticketmaster'}
-    <span class="ticket-fee-label">${show.source === 'seatgeek' ? 'varies' : '~25% fees'}</span>
+  const sourceLabels = { seatgeek: 'seatgeek', ticketmaster: 'ticketmaster', edmtrain: 'edmtrain' };
+  const feeLabels = { seatgeek: 'varies', ticketmaster: '~25% fees', edmtrain: 'varies' };
+  const sourceLabel = sourceLabels[show.source] || show.source;
+  const feeLabel = feeLabels[show.source] || 'varies';
+  let html = `<a href="${escapeHtml(show.ticketUrl)}" target="_blank" class="ticket-btn ticket-btn-primary" title="${feeLabel}">
+    ${sourceLabel}
+    <span class="ticket-fee-label">${feeLabel}</span>
   </a>`;
 
   if (show.altTicketUrl) {
@@ -400,7 +405,7 @@ function renderApp() {
       ${state.viewMode === 'artists' ? renderArtistsView() : renderNearbyView()}
 
       <footer>
-        ✦ powered by ticketmaster + seatgeek · alt links via tickpick + dice
+        ✦ powered by ticketmaster + seatgeek + edmtrain · alt links via tickpick + dice
       </footer>
     </div>
   `;

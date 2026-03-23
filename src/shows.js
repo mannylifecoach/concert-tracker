@@ -1,5 +1,6 @@
 import { fetchEventsByAttractionId, searchAttractions, getBestImage, fetchEventsByLocation as fetchTMByLocation } from './api.js';
 import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage, fetchEventsByLocation as fetchSGByLocation } from './seatgeek.js';
+import { fetchEventsByArtist as fetchETByArtist, fetchEventsByLocation as fetchETByLocation } from './edmtrain.js';
 import { state, saveArtists } from './state.js';
 import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
 
@@ -85,6 +86,32 @@ function parseSGEvent(event, artistName, index) {
   };
 }
 
+function parseETEvent(event, artistName, index) {
+  const venue = event.venue || {};
+  const venueName = venue.name || 'TBA';
+  const socials = getArtistSocials(artistName);
+
+  return {
+    id: `et-${event.id}`,
+    artist: artistName,
+    name: event.name || artistName,
+    venue: venueName,
+    city: venue.location || '',
+    state: venue.state || '',
+    country: venue.country || 'US',
+    date: new Date(event.date),
+    ticketUrl: event.link || '#',
+    image: null,
+    gradient: gradients[index % gradients.length],
+    source: 'edmtrain',
+    isFestival: event.festivalInd || false,
+    socials,
+    artistHomepage: socials.homepage || null,
+    tickPickUrl: buildTickPickUrl(artistName, venueName),
+    diceUrl: buildDiceUrl(artistName),
+  };
+}
+
 function simplifyName(name) {
   return name
     .normalize('NFD')
@@ -162,6 +189,23 @@ async function fetchSGShows(artist) {
   }
 }
 
+async function fetchETShows(artist) {
+  try {
+    const events = await fetchETByArtist(artist.name);
+    console.log(`ET: ${events.length} events for "${artist.name}"`);
+    return events.map((event, i) => {
+      // Use the matched artist name from the lineup if available
+      const matchedArtist = event.artistList?.find(
+        (a) => a.name.toLowerCase().includes(artist.name.toLowerCase()),
+      );
+      return parseETEvent(event, matchedArtist?.name || artist.name, i);
+    });
+  } catch (err) {
+    console.error(`EDMTrain error for ${artist.name}:`, err);
+    return [];
+  }
+}
+
 function dedupeShows(shows) {
   const deduped = new Map();
 
@@ -218,7 +262,7 @@ export async function fetchCityShows(renderFn) {
   try {
     const { lat, lon, radius } = state.citySearch;
 
-    const [tmEvents, sgEvents] = await Promise.all([
+    const [tmEvents, sgEvents, etEvents] = await Promise.all([
       fetchTMByLocation(lat, lon, radius).catch((err) => {
         console.error('TM city search error:', err);
         return [];
@@ -227,12 +271,20 @@ export async function fetchCityShows(renderFn) {
         console.error('SG city search error:', err);
         return [];
       }),
+      fetchETByLocation(lat, lon).catch((err) => {
+        console.error('ET city search error:', err);
+        return [];
+      }),
     ]);
 
     const tmShows = tmEvents.map((e, i) => parseTMCityEvent(e, i));
     const sgShows = sgEvents.map((e, i) => parseSGCityEvent(e, i));
+    const etShows = etEvents.map((e, i) => {
+      const artistName = e.artistList?.[0]?.name || e.name || 'Unknown';
+      return parseETEvent(e, artistName, i);
+    });
 
-    state.cityShows = dedupeShows([...tmShows, ...sgShows]).sort((a, b) => a.date - b.date);
+    state.cityShows = dedupeShows([...tmShows, ...sgShows, ...etShows]).sort((a, b) => a.date - b.date);
     state.cityLoading = false;
   } catch {
     state.cityError = 'Failed to fetch nearby shows. Please try again.';
@@ -254,12 +306,13 @@ export async function fetchAllShows(renderFn) {
   renderFn();
 
   try {
-    const [tmResults, sgResults] = await Promise.all([
+    const [tmResults, sgResults, etResults] = await Promise.all([
       Promise.all(state.artists.map(fetchTMShows)),
       Promise.all(state.artists.map(fetchSGShows)),
+      Promise.all(state.artists.map(fetchETShows)),
     ]);
 
-    const allShows = [...tmResults.flat(), ...sgResults.flat()];
+    const allShows = [...tmResults.flat(), ...sgResults.flat(), ...etResults.flat()];
     state.shows = dedupeShows(allShows).sort((a, b) => a.date - b.date);
 
     // Find and remove artists with zero shows
