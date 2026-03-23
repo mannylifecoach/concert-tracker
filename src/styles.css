@@ -93,8 +93,10 @@ header {
 .artist-filters {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 12px 16px;
   font-size: 12px;
+  padding: 0 24px;
 }
 
 .artist-filter {
