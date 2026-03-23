@@ -392,7 +392,7 @@ header {
 .show-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.2) 100%);
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.5) 100%);
 }
 
 .show-card-content {
@@ -447,16 +447,28 @@ header {
   color: #000;
 }
 
+/* Artist name + socials — top left of card */
+.show-card-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px;
+  z-index: 2;
+}
+
 .show-artist-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .show-artist {
-  font-size: 10px;
-  color: #555;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
   text-transform: lowercase;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 .card-social-links {
@@ -471,7 +483,7 @@ header {
   width: 22px;
   height: 22px;
   border-radius: 3px;
-  color: #555;
+  color: rgba(255, 255, 255, 0.5);
   text-decoration: none;
   transition: color 0.15s;
 }
@@ -937,6 +949,10 @@ footer {
   .show-card,
   .show-card:nth-child(3n+2) {
     aspect-ratio: 16/10;
+  }
+
+  .show-card-header {
+    padding: 12px 16px;
   }
 
   .show-card-content {
