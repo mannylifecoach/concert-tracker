@@ -49,14 +49,11 @@ function escapeHtml(str) {
 
 // --- Shared show card rendering ---
 
-function renderSourceBadge(show) {
-  const labels = { seatgeek: 'sg', ticketmaster: 'tm', edmtrain: 'et' };
-  const label = labels[show.source] || show.source;
-  let html = `<span class="source-badge source-${show.source}">${label}</span>`;
+function renderTypeBadge(show) {
   if (show.isFestival) {
-    html += `<span class="source-badge badge-festival">festival</span>`;
+    return `<span class="type-badge badge-festival">festival</span>`;
   }
-  return html;
+  return `<span class="type-badge badge-tour">tour</span>`;
 }
 
 function renderTicketLinks(show) {
@@ -127,7 +124,7 @@ function renderShowCard(show) {
         </div>
       </div>
       <div class="show-card-content">
-        <div class="show-date">${formatDate(show.date)} ${renderSourceBadge(show)}</div>
+        <div class="show-date">${formatDate(show.date)} ${renderTypeBadge(show)}</div>
         <div class="show-venue">${escapeHtml(show.venue)}</div>
         <div class="show-city">${escapeHtml(formatLocation(show))}</div>
         <div class="show-footer">
