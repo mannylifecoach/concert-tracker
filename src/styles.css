@@ -394,7 +394,7 @@ header {
 .show-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.5) 100%);
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.5) 100%);
 }
 
 .show-card-content {
@@ -407,11 +407,11 @@ header {
 
 .show-date {
   font-size: 11px;
-  color: #999;
+  color: #ccc;
   margin-bottom: 8px;
   text-transform: lowercase;
   letter-spacing: 0.5px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .show-venue {
