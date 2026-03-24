@@ -23,6 +23,9 @@ export const state = {
   cityShows: [],
   cityLoading: false,
   cityError: null,
+
+  // Announcements (buzz)
+  announcements: [],
 };
 
 function loadArtists() {

@@ -23,6 +23,7 @@
     "vite": "^8.0.1"
   },
   "dependencies": {
-    "@vercel/og": "^0.11.1"
+    "@vercel/og": "^0.11.1",
+    "fast-xml-parser": "^5.5.9"
   }
 }

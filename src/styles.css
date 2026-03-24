@@ -641,6 +641,143 @@ header {
   color: #fff;
 }
 
+/* Buzz section */
+.buzz-section {
+  padding: 0 24px 24px;
+}
+
+.buzz-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.buzz-label {
+  font-size: 11px;
+  color: #666;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
+.buzz-count {
+  font-size: 10px;
+  color: #555;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.buzz-toggle {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.buzz-toggle:hover {
+  color: #fff;
+}
+
+.buzz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.buzz-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #111;
+  border: 1px solid #1a1a1a;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.buzz-card:hover {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+}
+
+.buzz-source-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #1a1a1a;
+}
+
+.buzz-source-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.buzz-icon-rss {
+  color: #f97316;
+}
+
+.buzz-icon-reddit {
+  color: #ff4500;
+}
+
+.buzz-icon-bluesky {
+  color: #0085ff;
+}
+
+.buzz-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.buzz-title {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buzz-card:hover .buzz-title {
+  color: #fff;
+}
+
+.buzz-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: #555;
+}
+
+.buzz-artist {
+  color: #888;
+  text-transform: lowercase;
+}
+
+.buzz-source-name {
+  color: #555;
+}
+
+.buzz-time {
+  color: #444;
+}
+
 /* Footer */
 footer {
   padding: 48px 24px;
@@ -1009,6 +1146,24 @@ footer {
   .toast {
     font-size: 13px;
     padding: 14px 16px;
+  }
+
+  /* Buzz section */
+  .buzz-section {
+    padding: 0 16px 20px;
+  }
+
+  .buzz-card {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .buzz-title {
+    font-size: 13px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   /* Empty states */

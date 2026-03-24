@@ -13,6 +13,7 @@ let cityAutocompleteResults = [];
 let cityDebounceTimer = null;
 let expandedArtist = null;
 let discordEditArtist = null;
+let buzzExpanded = false;
 
 const RADIUS_OPTIONS = [25, 50, 100, 200];
 
@@ -293,6 +294,59 @@ function renderArtistSocials(artist) {
   `;
 }
 
+// --- Buzz section ---
+
+const buzzSourceIcons = {
+  rss: `<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>`,
+};
+
+function timeAgo(timestamp) {
+  if (!timestamp) return '';
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function renderBuzzSection() {
+  let items = state.announcements || [];
+  if (state.activeFilter) {
+    items = items.filter((a) => a.artist.toLowerCase() === state.activeFilter.toLowerCase());
+  }
+  if (items.length === 0) return '';
+
+  const visible = buzzExpanded ? items : items.slice(0, 3);
+  const hasMore = items.length > 3;
+
+  return `
+    <div class="buzz-section">
+      <div class="buzz-header">
+        <span class="buzz-label">buzz</span>
+        <span class="buzz-count">${items.length}</span>
+        ${hasMore ? `<button class="buzz-toggle" id="buzz-toggle">${buzzExpanded ? 'show less' : 'show more'}</button>` : ''}
+      </div>
+      <div class="buzz-list">
+        ${visible.map((a) => `
+          <a href="${escapeHtml(a.url)}" target="_blank" class="buzz-card" rel="noopener">
+            <span class="buzz-source-icon buzz-icon-${a.source}">${buzzSourceIcons[a.source] || ''}</span>
+            <span class="buzz-content">
+              <span class="buzz-title">${escapeHtml(a.title.length > 80 ? a.title.slice(0, 80) + '...' : a.title)}</span>
+              <span class="buzz-meta">
+                <span class="buzz-artist">${escapeHtml(a.artist.toLowerCase())}</span>
+                <span class="buzz-source-name">${escapeHtml(a.sourceName)}</span>
+                <span class="buzz-time">${timeAgo(a.timestamp)}</span>
+              </span>
+            </span>
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 // --- View: Artists ---
 
 function renderArtistsView() {
@@ -329,6 +383,8 @@ function renderArtistsView() {
         ${renderAutocomplete()}
       </div>
     </div>
+
+    ${renderBuzzSection()}
 
     ${state.loading ? `
       <div class="state-message">loading shows..</div>
@@ -411,7 +467,7 @@ function renderApp() {
       ${state.viewMode === 'artists' ? renderArtistsView() : renderNearbyView()}
 
       <footer>
-        ✦ powered by ticketmaster + seatgeek + edmtrain · alt links via tickpick + dice
+        ✦ powered by ticketmaster + seatgeek + edmtrain · buzz via rss · alt links via tickpick + dice
       </footer>
     </div>
   `;
@@ -661,6 +717,12 @@ function bindEvents() {
 
   // Remove city
   document.getElementById('remove-city')?.addEventListener('click', removeCity);
+
+  // Buzz toggle
+  document.getElementById('buzz-toggle')?.addEventListener('click', () => {
+    buzzExpanded = !buzzExpanded;
+    render();
+  });
 
   // --- Shared events ---
   // Share buttons

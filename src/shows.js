@@ -3,6 +3,7 @@ import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage, fetchEven
 import { fetchEventsByArtist as fetchETByArtist, fetchEventsByLocation as fetchETByLocation } from './edmtrain.js';
 import { state, saveArtists } from './state.js';
 import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
+import { fetchAllAnnouncements } from './announcements.js';
 
 const gradients = [
   'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
@@ -306,6 +307,11 @@ export async function fetchAllShows(renderFn) {
   renderFn();
 
   try {
+    // Fire announcement fetch in parallel (non-blocking)
+    fetchAllAnnouncements(state.artists.map((a) => a.name))
+      .then((results) => { state.announcements = results; renderFn(); })
+      .catch(() => { state.announcements = []; });
+
     const [tmResults, sgResults, etResults] = await Promise.all([
       Promise.all(state.artists.map(fetchTMShows)),
       Promise.all(state.artists.map(fetchSGShows)),
