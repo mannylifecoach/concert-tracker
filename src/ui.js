@@ -166,7 +166,16 @@ async function handleShare(showId) {
 
   track('show-shared', { artist: show.artist, venue: show.venue });
   const text = buildShareText(show);
-  const url = show.ticketUrl !== '#' ? show.ticketUrl : '';
+
+  // Pick cheapest link: artist site > tickpick > dice > seatgeek > ticketmaster
+  const candidates = [
+    show.artistHomepage,
+    show.tickPickUrl,
+    show.diceUrl,
+    show.source === 'seatgeek' ? show.ticketUrl : show.altTicketUrl,
+    show.source === 'ticketmaster' ? show.ticketUrl : show.altTicketUrl,
+  ];
+  const url = candidates.find((u) => u && u !== '#') || '';
   const shareData = {
     title: `${show.artist} — ${show.venue}`,
     text: `${text}\n\ncome with me?`,
