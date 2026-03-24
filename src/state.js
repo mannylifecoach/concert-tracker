@@ -17,6 +17,8 @@ export const state = {
   loading: false,
   error: null,
   noShowArtists: [],
+  announcementOnlyArtists: [],
+  artistAnnouncements: {},
 
   // Nearby view state
   citySearch: loadCitySearch(), // { name, lat, lon, radius } or null
