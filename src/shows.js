@@ -5,7 +5,7 @@ import { state, saveArtists } from './state.js';
 import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
 import { fetchAllAnnouncements } from './announcements.js';
 
-const gradients = [
+export const gradients = [
   'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
   'linear-gradient(135deg, #2d132c 0%, #801336 50%, #c72c41 100%)',
   'linear-gradient(135deg, #0f0f23 0%, #1e3a5f 50%, #3d5a80 100%)',
