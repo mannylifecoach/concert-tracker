@@ -141,6 +141,43 @@ function renderShowCard(show) {
   `;
 }
 
+function renderAnnouncementCard(announcement) {
+  const artist = state.artists.find((a) => a.name.toLowerCase() === announcement.artist.toLowerCase());
+  const socials = artist?.socials || {};
+  const gradientIndex = state.artists.indexOf(artist);
+  const gradient = gradientIndex >= 0
+    ? ['linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)','linear-gradient(135deg, #2d132c 0%, #801336 50%, #c72c41 100%)','linear-gradient(135deg, #0f0f23 0%, #1e3a5f 50%, #3d5a80 100%)','linear-gradient(135deg, #1a0a0a 0%, #4a1942 50%, #2d132c 100%)','linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%)','linear-gradient(135deg, #10002b 0%, #240046 50%, #3c096c 100%)','linear-gradient(135deg, #1b1b1b 0%, #2e2e2e 50%, #4a4a4a 100%)','linear-gradient(135deg, #0a1628 0%, #1a365d 50%, #2c5282 100%)','linear-gradient(135deg, #1a0000 0%, #4a0e0e 50%, #7f1d1d 100%)','linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)','linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%)','linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)'][gradientIndex % 12]
+    : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
+
+  const title = announcement.title.length > 100 ? announcement.title.slice(0, 100) + '...' : announcement.title;
+  const socialsHtml = renderCardSocials({ socials });
+
+  return `
+    <div class="show-card announcement-card">
+      <div class="show-card-bg" style="background: ${gradient}; background-size: cover; background-position: center;"></div>
+      <div class="show-card-overlay"></div>
+      <div class="show-card-header">
+        <div class="show-artist-row">
+          <span class="show-artist">${escapeHtml(announcement.artist.toLowerCase())}</span>
+          ${socialsHtml}
+        </div>
+      </div>
+      <div class="show-card-content">
+        <div class="show-date">${timeAgo(announcement.timestamp)} <span class="type-badge badge-buzz">buzz</span></div>
+        <div class="show-venue announcement-title">${escapeHtml(title)}</div>
+        <div class="show-city">${escapeHtml(announcement.sourceName)}</div>
+        <div class="show-footer">
+          <div class="ticket-links">
+            <a href="${escapeHtml(announcement.url)}" target="_blank" rel="noopener" class="ticket-link">
+              read article
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderShowsGrid(shows) {
   return `
     <div class="shows-grid">
@@ -349,10 +386,28 @@ function renderBuzzSection() {
 
 // --- View: Artists ---
 
+function getFilteredAnnouncements() {
+  const annMap = state.artistAnnouncements || {};
+  if (state.activeFilter) {
+    return annMap[state.activeFilter.toLowerCase()] || [];
+  }
+  return Object.values(annMap).flat();
+}
+
+function renderAnnouncementGrid(announcements) {
+  return `
+    <div class="shows-grid">
+      ${announcements.map((a) => renderAnnouncementCard(a)).join('')}
+    </div>
+  `;
+}
+
 function renderArtistsView() {
   const filteredShows = state.activeFilter
     ? state.shows.filter((s) => s.artist.toLowerCase() === state.activeFilter.toLowerCase())
     : state.shows;
+
+  const filteredAnnouncements = getFilteredAnnouncements();
 
   return `
     <div class="artist-filters">
@@ -392,9 +447,12 @@ function renderArtistsView() {
       <div class="state-message error">${escapeHtml(state.error)}</div>
     ` : state.artists.length === 0 ? `
       <div class="state-message">search for an artist to see their upcoming shows</div>
-    ` : filteredShows.length === 0 ? `
+    ` : filteredShows.length === 0 && filteredAnnouncements.length === 0 ? `
       <div class="state-message">no upcoming shows found</div>
-    ` : renderShowsGrid(filteredShows)}
+    ` : `
+      ${filteredShows.length > 0 ? renderShowsGrid(filteredShows) : ''}
+      ${filteredAnnouncements.length > 0 ? renderAnnouncementGrid(filteredAnnouncements) : ''}
+    `}
   `;
 }
 
@@ -735,7 +793,9 @@ function bindEvents() {
 }
 
 function showToasts() {
-  if (!state.noShowArtists || state.noShowArtists.length === 0) return;
+  const noShows = state.noShowArtists || [];
+  const buzzOnly = state.announcementOnlyArtists || [];
+  if (noShows.length === 0 && buzzOnly.length === 0) return;
 
   document.getElementById('toast-container')?.remove();
 
@@ -744,10 +804,21 @@ function showToasts() {
   container.className = 'toast-container';
   document.body.appendChild(container);
 
-  state.noShowArtists.forEach((name, i) => {
+  const allToasts = [
+    ...noShows.map((name) => ({
+      name,
+      message: `no upcoming shows found for <strong>${escapeHtml(name.toLowerCase())}</strong>`,
+    })),
+    ...buzzOnly.map((name) => ({
+      name,
+      message: `no shows found for <strong>${escapeHtml(name.toLowerCase())}</strong>, showing latest buzz`,
+    })),
+  ];
+
+  allToasts.forEach((item, i) => {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `no upcoming shows found for <strong>${escapeHtml(name.toLowerCase())}</strong>`;
+    toast.innerHTML = item.message;
 
     setTimeout(() => {
       container.appendChild(toast);
@@ -760,6 +831,7 @@ function showToasts() {
   });
 
   state.noShowArtists = [];
+  state.announcementOnlyArtists = [];
 }
 
 export function render() {

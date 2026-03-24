@@ -307,28 +307,52 @@ export async function fetchAllShows(renderFn) {
   renderFn();
 
   try {
-    // Fire announcement fetch in parallel (non-blocking)
-    fetchAllAnnouncements(state.artists.map((a) => a.name))
-      .then((results) => { state.announcements = results; renderFn(); })
-      .catch(() => { state.announcements = []; });
+    // Fetch announcements alongside shows (with timeout so slow RSS doesn't block)
+    const announcementPromise = fetchAllAnnouncements(state.artists.map((a) => a.name))
+      .catch(() => []);
+    const announcementTimeout = new Promise((resolve) => setTimeout(() => resolve([]), 5000));
 
-    const [tmResults, sgResults, etResults] = await Promise.all([
+    const [tmResults, sgResults, etResults, announcements] = await Promise.all([
       Promise.all(state.artists.map(fetchTMShows)),
       Promise.all(state.artists.map(fetchSGShows)),
       Promise.all(state.artists.map(fetchETShows)),
+      Promise.race([announcementPromise, announcementTimeout]),
     ]);
+
+    state.announcements = announcements;
 
     const allShows = [...tmResults.flat(), ...sgResults.flat(), ...etResults.flat()];
     state.shows = dedupeShows(allShows).sort((a, b) => a.date - b.date);
 
-    // Find and remove artists with zero shows
+    // Find artists with zero shows
     const artistsWithShows = new Set(state.shows.map((s) => s.artist.toLowerCase()));
-    state.noShowArtists = state.artists
-      .filter((a) => !artistsWithShows.has(a.name.toLowerCase()))
-      .map((a) => a.name);
+    const noShowArtistList = state.artists.filter((a) => !artistsWithShows.has(a.name.toLowerCase()));
 
-    if (state.noShowArtists.length > 0) {
-      state.artists = state.artists.filter((a) => artistsWithShows.has(a.name.toLowerCase()));
+    // Split no-show artists: those with announcements stay, others get removed
+    const artistAnnouncements = {};
+    const announcementOnly = [];
+    const trulyNoShows = [];
+
+    for (const artist of noShowArtistList) {
+      const matched = announcements.filter((a) => a.artist.toLowerCase() === artist.name.toLowerCase());
+      if (matched.length > 0) {
+        announcementOnly.push(artist.name);
+        artistAnnouncements[artist.name.toLowerCase()] = matched;
+      } else {
+        trulyNoShows.push(artist.name);
+      }
+    }
+
+    state.announcementOnlyArtists = announcementOnly;
+    state.artistAnnouncements = artistAnnouncements;
+    state.noShowArtists = trulyNoShows;
+
+    if (trulyNoShows.length > 0) {
+      const keepSet = new Set([
+        ...Array.from(artistsWithShows),
+        ...announcementOnly.map((n) => n.toLowerCase()),
+      ]);
+      state.artists = state.artists.filter((a) => keepSet.has(a.name.toLowerCase()));
       saveArtists();
     }
 
