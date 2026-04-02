@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'SeatGeek client ID not configured' });
   }
 
-  const { action, query, performerId, lat, lon, radius } = req.query;
+  const { action, query, performerId, lat, lon, radius, venueId } = req.query;
 
   if (!action) {
     return res.status(400).json({ error: 'Missing action parameter' });
@@ -39,6 +39,24 @@ export default async function handler(req, res) {
         lat,
         lon,
         range: `${radius || '100'}mi`,
+        sort: 'datetime_local.asc',
+        per_page: '200',
+        type: 'concert',
+      });
+      url = `${SG_BASE}/events?${params}`;
+    } else if (action === 'searchVenues') {
+      if (!query) return res.status(400).json({ error: 'Missing query parameter' });
+      const params = new URLSearchParams({
+        client_id: clientId,
+        q: query,
+        per_page: '8',
+      });
+      url = `${SG_BASE}/venues?${params}`;
+    } else if (action === 'venueEvents') {
+      if (!venueId) return res.status(400).json({ error: 'Missing venueId parameter' });
+      const params = new URLSearchParams({
+        client_id: clientId,
+        'venue.id': venueId,
         sort: 'datetime_local.asc',
         per_page: '200',
         type: 'concert',

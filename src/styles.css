@@ -569,6 +569,73 @@ header {
   color: #fff;
 }
 
+/* Venue search */
+.venue-search-section {
+  padding: 0 24px 24px;
+  border-bottom: 1px solid #1a1a1a;
+  margin-bottom: 32px;
+}
+
+.venue-search-wrapper {
+  position: relative;
+  max-width: 400px;
+}
+
+.venue-search-form {
+  display: flex;
+  gap: 12px;
+}
+
+.venue-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ccc;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.venue-autocomplete-item:hover {
+  background: #222;
+  color: #fff;
+}
+
+.venue-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.venue-autocomplete-item:hover .city-icon {
+  color: #fff;
+}
+
+.venue-ac-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.venue-ac-name {
+  font-weight: 500;
+  color: #eee;
+}
+
+.venue-ac-location {
+  font-size: 11px;
+  color: #888;
+}
+
+.venue-autocomplete-item:hover .venue-ac-location {
+  color: #aaa;
+}
+
 /* Radius toggle */
 .radius-toggle {
   display: flex;

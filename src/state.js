@@ -1,5 +1,6 @@
 const ARTISTS_KEY = 'concert_tracker_artists';
 const CITY_KEY = 'concert_tracker_city';
+const VENUE_KEY = 'concert_tracker_venue';
 
 /**
  * App state — single source of truth.
@@ -8,7 +9,7 @@ const CITY_KEY = 'concert_tracker_city';
  */
 export const state = {
   // View mode
-  viewMode: 'artists', // 'artists' | 'nearby'
+  viewMode: 'artists', // 'artists' | 'nearby' | 'venue'
 
   // Artist view state
   artists: loadArtists(),
@@ -25,6 +26,12 @@ export const state = {
   cityShows: [],
   cityLoading: false,
   cityError: null,
+
+  // Venue view state
+  venueSearch: loadVenueSearch(), // { tmId, sgId, name, city, state, lat, lon } or null
+  venueShows: [],
+  venueLoading: false,
+  venueError: null,
 
   // Announcements (buzz)
   announcements: [],
@@ -54,6 +61,16 @@ function loadCitySearch() {
   }
 }
 
+function loadVenueSearch() {
+  try {
+    const raw = localStorage.getItem(VENUE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function saveArtists() {
   localStorage.setItem(ARTISTS_KEY, JSON.stringify(state.artists));
 }
@@ -63,5 +80,13 @@ export function saveCitySearch() {
     localStorage.setItem(CITY_KEY, JSON.stringify(state.citySearch));
   } else {
     localStorage.removeItem(CITY_KEY);
+  }
+}
+
+export function saveVenueSearch() {
+  if (state.venueSearch) {
+    localStorage.setItem(VENUE_KEY, JSON.stringify(state.venueSearch));
+  } else {
+    localStorage.removeItem(VENUE_KEY);
   }
 }

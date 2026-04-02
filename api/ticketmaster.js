@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Ticketmaster API key not configured' });
   }
 
-  const { action, query, attractionId, lat, lon, radius } = req.query;
+  const { action, query, attractionId, lat, lon, radius, venueId } = req.query;
 
   if (!action) {
     return res.status(400).json({ error: 'Missing action parameter' });
@@ -43,6 +43,26 @@ export default async function handler(req, res) {
         latlong: `${lat},${lon}`,
         radius: radius || '100',
         unit: 'miles',
+        classificationName: 'music',
+        size: '200',
+        sort: 'date,asc',
+        locale: '*',
+      });
+      url = `${TM_BASE}/events.json?${params}`;
+    } else if (action === 'searchVenues') {
+      if (!query) return res.status(400).json({ error: 'Missing query parameter' });
+      const params = new URLSearchParams({
+        apikey: apiKey,
+        keyword: query,
+        size: '8',
+        locale: '*',
+      });
+      url = `${TM_BASE}/venues.json?${params}`;
+    } else if (action === 'venueEvents') {
+      if (!venueId) return res.status(400).json({ error: 'Missing venueId parameter' });
+      const params = new URLSearchParams({
+        apikey: apiKey,
+        venueId,
         classificationName: 'music',
         size: '200',
         sort: 'date,asc',

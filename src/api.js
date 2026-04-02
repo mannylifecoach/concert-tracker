@@ -86,6 +86,51 @@ export async function fetchEventsByLocation(lat, lon, radius) {
 }
 
 /**
+ * Search for venues by name via our serverless proxy.
+ * Returns an array of { id, name, city, state, country, lat, lon }.
+ */
+export async function searchVenues(query) {
+  if (!query.trim()) return [];
+
+  const params = new URLSearchParams({ action: 'searchVenues', query });
+  const res = await fetch(`/api/ticketmaster?${params}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to search venues');
+  }
+
+  const data = await res.json();
+  const venues = data._embedded?.venues || [];
+
+  return venues.map((v) => ({
+    id: v.id,
+    name: v.name,
+    city: v.city?.name || '',
+    state: v.state?.stateCode || '',
+    country: v.country?.countryCode || '',
+    lat: v.location?.latitude || null,
+    lon: v.location?.longitude || null,
+  }));
+}
+
+/**
+ * Fetch upcoming events at a specific Ticketmaster venue ID.
+ */
+export async function fetchEventsByVenueId(venueId) {
+  const params = new URLSearchParams({ action: 'venueEvents', venueId });
+  const res = await fetch(`/api/ticketmaster?${params}`);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch venue events');
+  }
+
+  const data = await res.json();
+  return data._embedded?.events || [];
+}
+
+/**
  * Pick the best image from a Ticketmaster images array.
  */
 export function getBestImage(images) {

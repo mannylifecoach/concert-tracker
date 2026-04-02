@@ -1,7 +1,8 @@
 import { searchAttractions } from './api.js';
-import { state, saveArtists, saveCitySearch } from './state.js';
-import { fetchAllShows, fetchCityShows, gradients } from './shows.js';
+import { state, saveArtists, saveCitySearch, saveVenueSearch } from './state.js';
+import { fetchAllShows, fetchCityShows, fetchVenueShows, gradients } from './shows.js';
 import { searchCities } from './geocode.js';
+import { searchVenues } from './api.js';
 
 function track(event, data) {
   if (typeof umami !== 'undefined') umami.track(event, data);
@@ -11,6 +12,8 @@ let debounceTimer = null;
 let autocompleteResults = [];
 let cityAutocompleteResults = [];
 let cityDebounceTimer = null;
+let venueAutocompleteResults = [];
+let venueDebounceTimer = null;
 let expandedArtist = null;
 let discordEditArtist = null;
 let buzzExpanded = false;
@@ -195,7 +198,7 @@ function buildShareText(show) {
 }
 
 async function handleShare(showId) {
-  const allShows = [...state.shows, ...state.cityShows];
+  const allShows = [...state.shows, ...state.cityShows, ...state.venueShows];
   const show = allShows.find((s) => s.id === showId);
   if (!show) return;
 
@@ -276,6 +279,25 @@ function renderCityAutocomplete() {
         <button class="city-autocomplete-item" data-name="${escapeHtml(c.name)}" data-lat="${c.lat}" data-lon="${c.lon}">
           <svg class="city-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span>${escapeHtml(c.name)}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+// --- Venue autocomplete ---
+
+function renderVenueAutocomplete() {
+  if (venueAutocompleteResults.length === 0) return '';
+  return `
+    <div class="autocomplete-dropdown">
+      ${venueAutocompleteResults.map((v) => `
+        <button class="venue-autocomplete-item" data-tm-id="${escapeHtml(v.id)}" data-name="${escapeHtml(v.name)}" data-city="${escapeHtml(v.city)}" data-state="${escapeHtml(v.state)}" data-lat="${v.lat || ''}" data-lon="${v.lon || ''}">
+          <svg class="city-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="venue-ac-info">
+            <span class="venue-ac-name">${escapeHtml(v.name)}</span>
+            <span class="venue-ac-location">${escapeHtml([v.city, v.state].filter(Boolean).join(', '))}</span>
+          </span>
         </button>
       `).join('')}
     </div>
@@ -507,6 +529,45 @@ function renderNearbyView() {
   `;
 }
 
+// --- View: Venue ---
+
+function renderVenueView() {
+  return `
+    <div class="venue-search-section">
+      <div class="venue-search-wrapper">
+        <form class="venue-search-form" id="venue-search-form">
+          <input
+            type="text"
+            class="add-artist-input"
+            id="venue-input"
+            placeholder="search venue.."
+            autocomplete="off"
+          >
+        </form>
+        ${renderVenueAutocomplete()}
+      </div>
+    </div>
+
+    ${state.venueSearch ? `
+      <div class="active-city">
+        <span class="active-city-name">${escapeHtml(state.venueSearch.name)}</span>
+        <span class="active-city-radius">${escapeHtml([state.venueSearch.city, state.venueSearch.state].filter(Boolean).join(', '))}</span>
+        <button class="active-city-remove" id="remove-venue">×</button>
+      </div>
+    ` : ''}
+
+    ${state.venueLoading ? `
+      <div class="state-message">loading venue shows..</div>
+    ` : state.venueError ? `
+      <div class="state-message error">${escapeHtml(state.venueError)}</div>
+    ` : !state.venueSearch ? `
+      <div class="state-message">search for a venue to see upcoming shows</div>
+    ` : state.venueShows.length === 0 ? `
+      <div class="state-message">no upcoming shows found at this venue</div>
+    ` : renderShowsGrid(state.venueShows)}
+  `;
+}
+
 // --- Main render ---
 
 function renderApp() {
@@ -518,11 +579,12 @@ function renderApp() {
           <div class="view-toggle">
             <button class="view-toggle-btn ${state.viewMode === 'artists' ? 'active' : ''}" data-view="artists">artists</button>
             <button class="view-toggle-btn ${state.viewMode === 'nearby' ? 'active' : ''}" data-view="nearby">nearby</button>
+            <button class="view-toggle-btn ${state.viewMode === 'venue' ? 'active' : ''}" data-view="venue">venue</button>
           </div>
         </div>
       </header>
 
-      ${state.viewMode === 'artists' ? renderArtistsView() : renderNearbyView()}
+      ${state.viewMode === 'artists' ? renderArtistsView() : state.viewMode === 'nearby' ? renderNearbyView() : renderVenueView()}
 
       <footer>
         ✦ powered by ticketmaster + seatgeek + edmtrain · buzz via rss · alt links via tickpick + dice
@@ -586,6 +648,29 @@ function setRadius(radius) {
   fetchCityShows(render);
 }
 
+function selectVenue(venue) {
+  track('venue-searched', { venue: venue.name });
+  state.venueSearch = {
+    tmId: venue.tmId || null,
+    sgId: venue.sgId || null,
+    name: venue.name,
+    city: venue.city,
+    state: venue.state,
+    lat: venue.lat || null,
+    lon: venue.lon || null,
+  };
+  saveVenueSearch();
+  venueAutocompleteResults = [];
+  fetchVenueShows(render);
+}
+
+function removeVenue() {
+  state.venueSearch = null;
+  state.venueShows = [];
+  saveVenueSearch();
+  render();
+}
+
 // --- Search handlers ---
 
 function handleSearchInput(value) {
@@ -636,6 +721,30 @@ function handleCitySearchInput(value) {
   }, 400);
 }
 
+function handleVenueSearchInput(value) {
+  clearTimeout(venueDebounceTimer);
+
+  if (!value.trim()) {
+    venueAutocompleteResults = [];
+    render();
+    return;
+  }
+
+  venueDebounceTimer = setTimeout(async () => {
+    try {
+      venueAutocompleteResults = await searchVenues(value);
+      render();
+      const input = document.getElementById('venue-input');
+      if (input) {
+        input.value = value;
+        input.focus();
+      }
+    } catch (err) {
+      console.error('Venue search failed:', err);
+    }
+  }, 400);
+}
+
 // --- Event binding ---
 
 function bindEvents() {
@@ -675,6 +784,11 @@ function bindEvents() {
 
     if (!e.target.closest('.city-search-wrapper') && cityAutocompleteResults.length > 0) {
       cityAutocompleteResults = [];
+      needsRender = true;
+    }
+
+    if (!e.target.closest('.venue-search-wrapper') && venueAutocompleteResults.length > 0) {
+      venueAutocompleteResults = [];
       needsRender = true;
     }
 
@@ -776,6 +890,32 @@ function bindEvents() {
   // Remove city
   document.getElementById('remove-city')?.addEventListener('click', removeCity);
 
+  // --- Venue view events ---
+  const venueInput = document.getElementById('venue-input');
+  venueInput?.addEventListener('input', (e) => handleVenueSearchInput(e.target.value));
+
+  document.getElementById('venue-search-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+  });
+
+  // Venue autocomplete clicks
+  document.querySelectorAll('.venue-autocomplete-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectVenue({
+        tmId: btn.dataset.tmId,
+        sgId: null,
+        name: btn.dataset.name,
+        city: btn.dataset.city,
+        state: btn.dataset.state,
+        lat: btn.dataset.lat || null,
+        lon: btn.dataset.lon || null,
+      });
+    });
+  });
+
+  // Remove venue
+  document.getElementById('remove-venue')?.addEventListener('click', removeVenue);
+
   // Buzz toggle
   document.getElementById('buzz-toggle')?.addEventListener('click', () => {
     buzzExpanded = !buzzExpanded;
@@ -848,5 +988,8 @@ export function init() {
   }
   if (state.citySearch) {
     fetchCityShows(render);
+  }
+  if (state.venueSearch) {
+    fetchVenueShows(render);
   }
 }

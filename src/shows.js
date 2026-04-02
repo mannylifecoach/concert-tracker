@@ -1,5 +1,5 @@
-import { fetchEventsByAttractionId, searchAttractions, getBestImage, fetchEventsByLocation as fetchTMByLocation } from './api.js';
-import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage, fetchEventsByLocation as fetchSGByLocation } from './seatgeek.js';
+import { fetchEventsByAttractionId, searchAttractions, getBestImage, fetchEventsByLocation as fetchTMByLocation, fetchEventsByVenueId as fetchTMByVenueId } from './api.js';
+import { fetchEventsByPerformerId, searchPerformers, getSeatGeekImage, fetchEventsByLocation as fetchSGByLocation, fetchEventsByVenueId as fetchSGByVenueId, searchSGVenues } from './seatgeek.js';
 import { fetchEventsByArtist as fetchETByArtist, fetchEventsByLocation as fetchETByLocation } from './edmtrain.js';
 import { state, saveArtists } from './state.js';
 import { buildTickPickUrl, buildDiceUrl } from './ticketlinks.js';
@@ -290,6 +290,85 @@ export async function fetchCityShows(renderFn) {
   } catch {
     state.cityError = 'Failed to fetch nearby shows. Please try again.';
     state.cityLoading = false;
+  }
+
+  renderFn();
+}
+
+export async function fetchVenueShows(renderFn) {
+  if (!state.venueSearch) {
+    state.venueShows = [];
+    renderFn();
+    return;
+  }
+
+  state.venueLoading = true;
+  state.venueError = null;
+  renderFn();
+
+  try {
+    const { tmId, lat, lon, name } = state.venueSearch;
+    let { sgId } = state.venueSearch;
+
+    // Resolve SeatGeek venue ID by name if we don't have one
+    if (!sgId && name) {
+      try {
+        const sgVenues = await searchSGVenues(name);
+        if (sgVenues.length > 0) {
+          sgId = sgVenues[0].id;
+          state.venueSearch.sgId = sgId;
+          console.log(`SG venue: matched "${name}" → venue ID ${sgId}`);
+        }
+      } catch (err) {
+        console.error('SG venue lookup failed:', err);
+      }
+    }
+
+    const fetchers = [];
+
+    // Ticketmaster venue events
+    if (tmId) {
+      fetchers.push(
+        fetchTMByVenueId(tmId)
+          .then((events) => events.map((e, i) => parseTMCityEvent(e, i)))
+          .catch((err) => { console.error('TM venue search error:', err); return []; }),
+      );
+    } else {
+      fetchers.push(Promise.resolve([]));
+    }
+
+    // SeatGeek venue events
+    if (sgId) {
+      fetchers.push(
+        fetchSGByVenueId(sgId)
+          .then((events) => events.map((e, i) => parseSGCityEvent(e, i)))
+          .catch((err) => { console.error('SG venue search error:', err); return []; }),
+      );
+    } else {
+      fetchers.push(Promise.resolve([]));
+    }
+
+    // EDMTrain — use location-based search with venue coordinates as proxy
+    if (lat && lon) {
+      fetchers.push(
+        fetchETByLocation(lat, lon)
+          .then((events) => events.map((e, i) => {
+            const artistName = e.artistList?.[0]?.name || e.name || 'Unknown';
+            return parseETEvent(e, artistName, i);
+          }))
+          .catch((err) => { console.error('ET venue search error:', err); return []; }),
+      );
+    } else {
+      fetchers.push(Promise.resolve([]));
+    }
+
+    const [tmShows, sgShows, etShows] = await Promise.all(fetchers);
+
+    state.venueShows = dedupeShows([...tmShows, ...sgShows, ...etShows]).sort((a, b) => a.date - b.date);
+    state.venueLoading = false;
+  } catch {
+    state.venueError = 'Failed to fetch venue shows. Please try again.';
+    state.venueLoading = false;
   }
 
   renderFn();
